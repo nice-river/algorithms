@@ -41,9 +41,9 @@ impl Solution {
 			if !Solution::check(n, i, board) {
 				continue
 			}
-			board[n].replace_range(i..i+1, "Q");
+			unsafe {board[n].as_bytes_mut()[i] = 'Q' as u8;}
 			Solution::dfs(n + 1, board, ans);
-			board[n].replace_range(i..i+1, ".");
+			unsafe {board[n].as_bytes_mut()[i] = '.' as u8;}
 		}
 	}
 }
