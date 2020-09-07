@@ -7,3 +7,4 @@ mod lc257;
 mod leetcode;
 mod lc60;
 mod lc107;
+mod lc347;
