@@ -6,9 +6,9 @@ mod tests {
 
 	#[test]
 	fn test() {
-		let candidates = vec![2];
-		let ans = Solution::combination_sum(candidates, 2);
-		assert_eq!(ans.len(), 1);
+		let candidates = vec![2, 3, 5, 7];
+		let ans = Solution::combination_sum(candidates, 7);
+		assert_eq!(ans.len(), 2);
 	}
 }
 
@@ -28,10 +28,10 @@ use std::cell::RefCell;
 impl Solution {
 	pub fn combination_sum(candidates: Vec<i32>, target: i32) -> Vec<Vec<i32>> {
 		let mut ans = vec![];
-		let dp = Rc::new(RefCell::new(vec![vec![State::NotVis; candidates.len()]; target as usize + 1]));
+		let mut dp = vec![vec![State::NotVis; candidates.len()]; target as usize + 1];
 		let target = target as usize;
-		Solution::dfs(target, 0, &candidates, dp.clone());
-		match &(*RefCell::borrow(&dp))[target][0] {
+		Solution::dfs(target, 0, &candidates, &mut dp);
+		match &dp[target][0] {
 			State::Ans(all) => {
 				for one in all {
 					ans.push(Vec::new());
@@ -48,28 +48,28 @@ impl Solution {
 		ans
 	}
 
-	fn dfs(target: usize, idx: usize, candidates: &Vec<i32>, dp: Rc<RefCell<Vec<Vec<State>>>>) {
-		if (*RefCell::borrow(&dp))[target][idx] != State::NotVis {
+	fn dfs(target: usize, idx: usize, candidates: &Vec<i32>, dp: &mut Vec<Vec<State>>) {
+		if dp[target][idx] != State::NotVis {
 			return ;
 		}
 		if target == 0 {
-			(*RefCell::borrow_mut(&dp))[target][idx] = State::Ans(vec![vec![]]);
+			dp[target][idx] = State::Ans(vec![vec![]]);
 			return ;
 		}
 		if idx + 1 == candidates.len() {
 			if target % candidates[idx] as usize == 0 {
-				(*RefCell::borrow_mut(&dp))[target][idx] = State::Ans(vec![vec![Pair(candidates[idx] as usize, target / candidates[idx] as usize)]]);
+				dp[target][idx] = State::Ans(vec![vec![Pair(candidates[idx] as usize, target / candidates[idx] as usize)]]);
 			} else {
-				(*RefCell::borrow_mut(&dp))[target][idx] = State::NoAns;
+				dp[target][idx] = State::NoAns;
 			}
 			return ;
 		}
-		(*RefCell::borrow_mut(&dp))[target][idx] = State::Ans(Vec::new());
+		dp[target][idx] = State::Ans(Vec::new());
 		for i in 0..=(target / candidates[idx] as usize) {
 			let nxt = target - i * candidates[idx] as usize;
-			Solution::dfs(nxt, idx + 1, candidates, dp.clone());
+			Solution::dfs(nxt, idx + 1, candidates, dp);
 
-			let raw: *mut _ = &mut (RefCell::borrow_mut(&dp));
+			let raw: *mut Vec<Vec<State>> = dp;
 
 			unsafe {
 				match &(*raw)[nxt][idx + 1] {
