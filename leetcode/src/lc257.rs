@@ -24,7 +24,7 @@ impl Solution {
 			let node = RefCell::borrow(root);
 			path.push(node.val.to_string());
 			if node.left.is_none() && node.right.is_none() {
-				ans.push(path.join(("->")));
+				ans.push(path.join("->"));
 			}
 			if let Some(left) = &node.left {
 				Solution::dfs(Some(left.clone()), path, ans);
