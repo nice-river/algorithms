@@ -10,3 +10,4 @@ mod lc107;
 mod lc347;
 mod lc77;
 mod lc39;
+mod lc40;
