@@ -11,3 +11,6 @@ mod lc347;
 mod lc77;
 mod lc39;
 mod lc40;
+mod lc216;
+mod lc637;
+mod lc79;
