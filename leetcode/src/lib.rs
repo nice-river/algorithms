@@ -15,3 +15,5 @@ mod lc216;
 mod lc637;
 mod lc79;
 mod lc94;
+mod lc226;
+mod lc685;
