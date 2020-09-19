@@ -18,3 +18,4 @@ mod lc94;
 mod lc226;
 mod lc685;
 mod lc47;
+mod lc78;
