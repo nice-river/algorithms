@@ -22,4 +22,6 @@ mod lc78;
 mod lc538;
 mod lc968;
 mod lc617;
+mod lc501;
+mod lc106;
 
