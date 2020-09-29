@@ -26,4 +26,5 @@ mod lc501;
 mod lc106;
 mod lc113;
 mod lc145;
+mod lc701;
 
