@@ -27,4 +27,12 @@ mod lc106;
 mod lc113;
 mod lc145;
 mod lc701;
+mod lcp19;
+mod lc771;
+mod lc1;
+mod lc2;
+mod lc18;
+mod lc834;
+mod lc75;
+mod lc344;
 
