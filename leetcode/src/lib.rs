@@ -1,3 +1,5 @@
+#![allow(warnings)]
+
 mod lc557;
 mod lc841;
 mod lc486;
@@ -38,3 +40,4 @@ mod lc75;
 mod lc344;
 mod lc235;
 mod lc416;
+mod lc530;
