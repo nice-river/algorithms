@@ -41,3 +41,7 @@ mod lc344;
 mod lc235;
 mod lc416;
 mod lc530;
+mod lc24;
+mod lc1002;
+mod lc844;
+mod lc19;
