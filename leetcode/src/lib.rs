@@ -45,3 +45,7 @@ mod lc24;
 mod lc1002;
 mod lc844;
 mod lc19;
+mod lc925;
+mod lc763;
+mod lc234;
+mod lc1024;
