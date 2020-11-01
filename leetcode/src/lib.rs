@@ -6,3 +6,5 @@ mod lc144;
 mod lc1027;
 mod lc129;
 mod lc463;
+mod lc381;
+mod lc140;
