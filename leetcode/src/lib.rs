@@ -8,3 +8,8 @@ mod lc129;
 mod lc463;
 mod lc381;
 mod lc140;
+mod lc349;
+mod lc941;
+mod lc57;
+mod lc127;
+mod lc1356;
