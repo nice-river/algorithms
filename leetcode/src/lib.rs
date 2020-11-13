@@ -15,3 +15,8 @@ mod lc127;
 mod lc1356;
 mod lc327;
 mod lc122;
+mod lc973;
+mod lc31;
+mod lc514;
+mod lc922;
+mod lc328;
