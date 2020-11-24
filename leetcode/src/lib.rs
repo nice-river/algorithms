@@ -27,3 +27,4 @@ mod lc283;
 mod lc147;
 mod lc148;
 mod lc242;
+mod lc1370;
