@@ -26,6 +26,14 @@ mod lc134;
 mod lc283;
 mod lc147;
 mod lc148;
+mod lc452;
+mod lc222;
 mod lc242;
 mod lc1370;
+<<<<<<< HEAD:src/leetcode/lib.rs
 mod lc976;
+=======
+mod lc164;
+mod lc454;
+mod lc493;
+>>>>>>> e238b466893bf01fc0cb86cea6c3090ac21236a5:leetcode/src/lib.rs
