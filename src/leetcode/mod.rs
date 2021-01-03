@@ -15,3 +15,5 @@ mod lc188;
 mod lc330;
 mod lc1046;
 mod lc435;
+mod lc605;
+mod lc239;
