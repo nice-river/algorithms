@@ -4,6 +4,7 @@ mod lc1018;
 mod lc947;
 mod lc803;
 mod lc674;
+mod lc839;
 mod lc959;
 mod lc1128;
 mod lc1579;
