@@ -42,7 +42,7 @@ fn go(m: &mut Matrix, partial_answer: &mut Vec<Cell>, answers: &mut Vec<Vec<usiz
 		go(m, partial_answer, answers);
 
 		let mut j = m.x.cursor(r);
-		while let Some(j) = j.prev(&m.x) {
+		while let Some(j) = j.next(&m.x) {
 			m.uncover(m.c[j]);
 		}
 		partial_answer.pop();
@@ -108,7 +108,7 @@ impl LinkedList {
 
 	fn restore(&mut self, b: Cell) {
 		let a = self[b].prev;
-		let c = self[a].next;
+		let c = self[b].next;
 		self[a].next = b;
 		self[c].prev = b;
 	}
@@ -247,9 +247,9 @@ impl Matrix {
 		}).unwrap()
 	}
 
-	fn cover(&mut self, c: Cell) {
-		self.x.remove(c);
-		let mut i = self.y.cursor(c);
+	fn cover(&mut self, col: Cell) {
+		self.x.remove(col);
+		let mut i = self.y.cursor(col);
 		while let Some(i) = i.next(&self.y) {
 			let mut j = self.x.cursor(i);
 			while let Some(j) = j.next(&self.x) {
@@ -259,16 +259,16 @@ impl Matrix {
 		}
 	}
 
-	fn uncover(&mut self, c: Cell) {
-		let mut i = self.y.cursor(c);
-		while let Some(i) = i.prev(&self.y) {
+	fn uncover(&mut self, col: Cell) {
+		let mut i = self.y.cursor(col);
+		while let Some(i) = i.next(&self.y) {
 			let mut j = self.x.cursor(i);
-			while let Some(j) = j.prev(&self.x) {
+			while let Some(j) = j.next(&self.x) {
 				self.size[self.c[j]] += 1;
 				self.y.restore(j);
 			}
 		}
-		self.x.restore(c);
+		self.x.restore(col);
 	}
 }
 
@@ -315,9 +315,15 @@ mod tests {
 
 	#[test]
 	fn smoke() {
-		let mut m = Matrix::new(3);
-		m.add_row(&[false, true, true]);
-		m.add_row(&[true, true, false]);
+		let mut m = Matrix::new(2);
+		m.add_row(&[true, true]);
+		m.add_row(&[true, true]);
+		eprintln!("{}", m);
+		m.cover(Cell(1));
+		m.cover(Cell(2));
+		eprintln!("{}", m);
+		m.uncover(Cell(1));
+		m.uncover(Cell(2));
 		eprintln!("{}", m);
 	}
 
@@ -338,46 +344,46 @@ mod tests {
 
 	#[test]
 	fn exhaustive_test() {
-		let mut rows = [0u32; 4];
 		'matrix: for matrix_bits in 0..=0b1111_1111_1111_1111 {
+			let mut rows = [0u32; 4];
 			for (i, row) in rows.iter_mut().enumerate() {
 				*row = (matrix_bits >> (i * 4)) & 0b1111;
 				if *row == 0 {
 					continue 'matrix;
 				}
 			}
-		}
 
-		let brute_force = {
-			let mut n_solutions = 0;
-			for mask in 0..=0b1111 {
-				let mut or = 0;
-				let mut n_ones = 0;
-				for (i, &row) in rows.iter().enumerate() {
-					if mask & (1 << i) != 0 {
-						or |= row;
-						n_ones += row.count_ones();
+			let brute_force = {
+				let mut n_solutions = 0;
+				for mask in 0..=0b1111 {
+					let mut or = 0;
+					let mut n_ones = 0;
+					for (i, &row) in rows.iter().enumerate() {
+						if mask & (1 << i) != 0 {
+							or |= row;
+							n_ones += row.count_ones();
+						}
+					}
+					if or == 0b1111 && n_ones == 4 {
+						n_solutions += 1;
 					}
 				}
-				if or == 0b1111 && n_ones == 4 {
-					n_solutions += 1;
-				}
-			}
-			n_solutions
-		};
+				n_solutions
+			};
 
-		let dlx = {
-			let mut m = Matrix::new(4);
-			for row_bits in rows.iter() {
-				let mut row = [false; 4];
-				for i in 0..4 {
-					row[i] = row_bits & (1 << i) != 0;
+			let dlx = {
+				let mut m = Matrix::new(4);
+				for row_bits in rows.iter() {
+					let mut row = [false; 4];
+					for i in 0..4 {
+						row[i] = row_bits & (1 << i) != 0;
+					}
+					m.add_row(&row);
 				}
-				m.add_row(&row);
-			}
-			solve(m).len()
-		};
-		assert_eq!(brute_force, dlx);
+				solve(m).len()
+			};
+			assert_eq!(brute_force, dlx);
+		}
 	}
 }
 
