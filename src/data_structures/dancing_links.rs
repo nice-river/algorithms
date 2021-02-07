@@ -1,3 +1,5 @@
+// copy from https://ferrous-systems.com/blog/dlx-in-rust/
+
 use std::{ops, fmt};
 use std::ops::{Index, Range};
 use std::cmp::Ordering;
