@@ -316,7 +316,8 @@ mod tests {
 	#[test]
 	fn smoke() {
 		let mut m = Matrix::new(3);
-		m.add_row(&[true, true, true]);
+		m.add_row(&[false, true, true]);
+		m.add_row(&[true, true, false]);
 		eprintln!("{}", m);
 	}
 
