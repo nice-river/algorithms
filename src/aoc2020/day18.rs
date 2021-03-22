@@ -72,19 +72,6 @@ fn eval(st: usize, ed: usize, expr: &Vec<u8>, parentheses_match: &HashMap<usize,
 		idx = nxt_idx;
 		ops.push(op);
 	}
-	// let mut ret = nums[0];
-	// for i in 0..ops.len() {
-	// 	match ops[i] {
-	// 		b'+' => {
-	// 			ret += nums[i + 1];
-	// 		},
-	// 		b'*' => {
-	// 			ret *= nums[i + 1];
-	// 		}
-	// 		_ => unreachable!()
-	// 	}
-	// }
-	// ret
 	let mut muls = vec![nums[0]];
 	for i in 0..ops.len() {
 		match ops[i] {
