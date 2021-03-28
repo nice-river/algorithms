@@ -19,6 +19,14 @@ impl TreeNode {
       right: None
     }
   }
+
+  pub fn left_node(&mut self, node: TreeNode) {
+    self.left = Some(Rc::new(RefCell::new(node)));
+  }
+
+  pub fn right_node(&mut self, node: TreeNode) {
+    self.right = Some(Rc::new(RefCell::new(node)));
+  }
 }
 
 
