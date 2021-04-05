@@ -6,3 +6,5 @@ mod lc82;
 mod lc61;
 mod lc173;
 mod lc1143;
+mod lc781;
+mod lc88;
