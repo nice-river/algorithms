@@ -1,13 +1,16 @@
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::cmp::Ordering;
 use std::cell::RefCell;
 use std::borrow::Borrow;
-use rand::random;
+use std::fmt::{Debug, Formatter};
+use std::fmt;
+use crate::leetcode::leetcode::TreeNode;
 
 #[derive(Debug, Default)]
 struct Node<T: Ord + Clone> {
     val: T,
     next: Option<Rc<RefCell<Node<T>>>>,
+    prev: Option<Weak<RefCell<Node<T>>>>,
     down: Option<Rc<RefCell<Node<T>>>>,
     span: usize,
 }
@@ -17,6 +20,7 @@ impl<T: Ord + Clone> Node<T> {
         Self {
             val,
             next: None,
+            prev: None,
             down: None,
             span: 0,
         }
@@ -70,7 +74,7 @@ impl<T: Ord + Default + Clone> SkipList<T> {
                 break;
             }
         }
-        self.append_after_node(node.clone(), val.clone());
+        node = self.append_after_node(node.clone(), val.clone());
         for i in 1..self.layers.len() {
             if rand::random() {
                 let new_node = self.append_after_node(pre_nodes[i].clone(), val.clone());
@@ -78,6 +82,7 @@ impl<T: Ord + Default + Clone> SkipList<T> {
                 new_node_mut_ref.down = Some(node);
                 node = new_node.clone();
                 self.cur_max_layer = self.cur_max_layer.max(i);
+                break;
             } else {
                 break;
             }
@@ -85,11 +90,15 @@ impl<T: Ord + Default + Clone> SkipList<T> {
     }
 
     fn append_after_node(&mut self, node: Rc<RefCell<Node<T>>>, val: T) -> Rc<RefCell<Node<T>>> {
-        let mut node = RefCell::borrow_mut(&node);
+        let mut ref_node = RefCell::borrow_mut(&node);
         let mut new_node = Node::new(val);
-        new_node.next = node.next.clone();
+        new_node.next = ref_node.next.clone();
+        new_node.prev = Some(Rc::downgrade(&node));
         let new_node = Rc::new(RefCell::new(new_node));
-        node.next = Some(new_node.clone());
+        ref_node.next = Some(new_node.clone());
+        if let Some(x) = new_node.borrow_mut().next.as_ref() {
+            x.borrow_mut().prev = Some(Rc::downgrade(&new_node));
+        }
         new_node
     }
 
@@ -122,30 +131,117 @@ impl<T: Ord + Default + Clone> SkipList<T> {
         }
         false
     }
+
+    pub fn remove(&mut self, val: T) -> bool {
+        let mut cur_layer = self.cur_max_layer;
+        let mut node = self.layers[cur_layer].clone();
+        loop {
+            let mut next_node = RefCell::borrow(node.as_ref()).next.clone();
+            while let Some(next) = next_node {
+                let x = RefCell::borrow(&next);
+                match x.val.cmp(&val) {
+                    Ordering::Less => {
+                        node = next.clone();
+                        next_node = RefCell::borrow(node.as_ref()).next.clone();
+                    }
+                    Ordering::Equal => {
+                        drop(x);
+                        let mut node = next.clone();
+                        loop {
+                            let mut x = RefCell::borrow_mut(&node);
+                            if let Some(t) = x.next.as_ref() {
+                                t.borrow_mut().prev = x.prev.clone();
+                            }
+                            if let Some(t) = x.prev.as_ref() {
+                                if let Some(t) = t.upgrade() {
+                                    t.borrow_mut().next = x.next.clone();
+                                }
+                            }
+                            let down = x.down.take();
+                            drop(x);
+                            if let Some(down_node) = down {
+                                node = down_node.clone();
+                            } else {
+                                break;
+                            }
+                        }
+                        return true;
+                    }
+                    Ordering::Greater => {
+                        break;
+                    }
+                }
+            }
+            let down = RefCell::borrow(node.as_ref()).down.clone();
+            if let Some(down) = down {
+                node = down;
+            } else {
+                break;
+            }
+        }
+        false
+    }
+}
+
+impl<T: Debug + Clone + Ord + Default> Debug for SkipList<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let default = Rc::new(RefCell::new(Node::default()));
+        for i in (0..=1).rev() {
+            write!(f, "head({:p})(down: {:p})", self.layers[i], self.layers[i].as_ref().borrow().down.as_ref().unwrap_or(&default).clone());
+            let mut node = self.layers[i].clone();
+            let mut next_node = RefCell::borrow(node.as_ref()).next.clone();
+            while let Some(x) = next_node {
+                write!(f, " -> ");
+                write!(f, "{:p}(down: {:p})", x.as_ref(), x.as_ref().borrow().down.as_ref().unwrap_or(&default).clone());
+                let k = x.clone();
+                node = x.clone();
+                next_node = RefCell::borrow(node.as_ref()).next.clone();
+            }
+            writeln!(f);
+        }
+        write!(f, "")
+    }
 }
 
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
+    use std::time::Instant;
 
     #[test]
-    fn test_insert() {
+    fn test_remove() {
         let mut skip_list: SkipList<i32> = SkipList::new(4);
+        assert!(!skip_list.search(0));
+        skip_list.insert(0);
+        assert!(skip_list.search(0));
+        assert!(skip_list.remove(0));
+        assert!(!skip_list.remove(0));
     }
 
     #[test]
-    fn test_search() {
+    fn test_skip_list() {
         let mut skip_list: SkipList<i32> = SkipList::new(4);
-        let n = 100;
-        for i in (0..n).step_by(2) {
+        let start = Instant::now();
+        let n = 10000;
+        for i in 0..n {
             skip_list.insert(i);
         }
-        for i in (0..n).step_by(2) {
-            assert!(skip_list.search(i));
-        }
-        for i in (1..n).step_by(2) {
-            assert!(!skip_list.search(i));
-        }
+
+        println!("insert elapsed: {:?}", start.elapsed());
+
+        // let start = Instant::now();
+        // let mut remove_set = HashSet::new();
+        // for i in 0..n {
+        //     if i % 2 == 0 {
+        //         remove_set.insert(i);
+        //         skip_list.remove(i);
+        //     }
+        // }
+        // for i in 0..n {
+        //     assert!(!skip_list.search(i) ^ !remove_set.contains(&i))
+        // }
+        // println!("remove and search elapsed: {:?}", start.elapsed());
     }
 }
