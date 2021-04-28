@@ -12,7 +12,6 @@ struct Node<T: Ord + Clone> {
     next: Option<Rc<RefCell<Node<T>>>>,
     prev: Option<Weak<RefCell<Node<T>>>>,
     down: Option<Rc<RefCell<Node<T>>>>,
-    span: usize,
 }
 
 impl<T: Ord + Clone> Node<T> {
@@ -22,7 +21,6 @@ impl<T: Ord + Clone> Node<T> {
             next: None,
             prev: None,
             down: None,
-            span: 0,
         }
     }
 }
@@ -33,7 +31,7 @@ pub struct SkipList<T: Ord + Default + Clone> {
     layers: Vec<Rc<RefCell<Node<T>>>>,
 }
 
-impl<T: Ord + Default + Clone> SkipList<T> {
+impl<T: Debug + Ord + Default + Clone> SkipList<T> {
     pub fn new(max_layer: usize) -> Self {
         let mut layers = Vec::with_capacity(max_layer);
         layers.push(Rc::new(RefCell::new(Node::default())));
@@ -53,10 +51,12 @@ impl<T: Ord + Default + Clone> SkipList<T> {
         let mut cur_layer = self.cur_max_layer;
         let mut node = self.layers[cur_layer].clone();
         let mut pre_nodes = self.layers.clone();
+        let mut cmp_times = 0;
         loop {
             let mut next_node = RefCell::borrow(node.as_ref()).next.clone();
             while let Some(next) = next_node {
                 let x = RefCell::borrow(&next);
+                cmp_times += 1;
                 match x.val.cmp(&val) {
                     Ordering::Less => {
                         node = next.clone();
@@ -82,7 +82,6 @@ impl<T: Ord + Default + Clone> SkipList<T> {
                 new_node_mut_ref.down = Some(node);
                 node = new_node.clone();
                 self.cur_max_layer = self.cur_max_layer.max(i);
-                break;
             } else {
                 break;
             }
@@ -92,7 +91,7 @@ impl<T: Ord + Default + Clone> SkipList<T> {
     fn append_after_node(&mut self, node: Rc<RefCell<Node<T>>>, val: T) -> Rc<RefCell<Node<T>>> {
         let mut ref_node = RefCell::borrow_mut(&node);
         let mut new_node = Node::new(val);
-        new_node.next = ref_node.next.clone();
+        new_node.next = ref_node.next.take();
         new_node.prev = Some(Rc::downgrade(&node));
         let new_node = Rc::new(RefCell::new(new_node));
         ref_node.next = Some(new_node.clone());
@@ -203,6 +202,22 @@ impl<T: Debug + Clone + Ord + Default> Debug for SkipList<T> {
     }
 }
 
+impl<T: Ord + Default + Clone> Drop for SkipList<T> {
+    fn drop(&mut self) {
+        for i in (0..=self.cur_max_layer).rev() {
+            let mut node = self.layers[i].clone();
+            loop {
+                let x = node.borrow_mut().next.take();
+                if x.is_some() {
+                    node = x.unwrap();
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -222,26 +237,51 @@ mod tests {
 
     #[test]
     fn test_skip_list() {
-        let mut skip_list: SkipList<i32> = SkipList::new(4);
+        let mut skip_list: SkipList<i32> = SkipList::new(32);
         let start = Instant::now();
-        let n = 10000;
+        let n = 10000000;
         for i in 0..n {
             skip_list.insert(i);
         }
 
         println!("insert elapsed: {:?}", start.elapsed());
 
-        // let start = Instant::now();
-        // let mut remove_set = HashSet::new();
-        // for i in 0..n {
-        //     if i % 2 == 0 {
-        //         remove_set.insert(i);
-        //         skip_list.remove(i);
-        //     }
-        // }
-        // for i in 0..n {
-        //     assert!(!skip_list.search(i) ^ !remove_set.contains(&i))
-        // }
-        // println!("remove and search elapsed: {:?}", start.elapsed());
+        let start = Instant::now();
+        let mut remove_set = HashSet::new();
+        for i in 0..n {
+            if i % 2 == 0 {
+                remove_set.insert(i);
+                skip_list.remove(i);
+            }
+        }
+        for i in 0..n {
+            assert!(!skip_list.search(i) ^ !remove_set.contains(&i))
+        }
+        println!("remove and search elapsed: {:?}", start.elapsed());
+    }
+
+    #[test]
+    fn test_btree_map() {
+        let mut map = std::collections::BTreeSet::new();
+        let start = Instant::now();
+        let n = 10000000;
+        for i in 0..n {
+            map.insert(i);
+        }
+
+        println!("insert elapsed: {:?}", start.elapsed());
+
+        let start = Instant::now();
+        let mut remove_set = HashSet::new();
+        for i in 0..n {
+            if i % 2 == 0 {
+                remove_set.insert(i);
+                map.remove(&i);
+            }
+        }
+        for i in 0..n {
+            assert!(!map.get(&i).is_some() ^ !remove_set.contains(&i))
+        }
+        println!("remove and search elapsed: {:?}", start.elapsed());
     }
 }
