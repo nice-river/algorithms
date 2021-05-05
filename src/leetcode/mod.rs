@@ -4,3 +4,7 @@ mod lc938;
 mod lc633;
 mod lc403;
 mod lc137;
+mod lc554;
+mod lc7;
+mod lc1473;
+mod lc740;
