@@ -8,3 +8,4 @@ mod lc554;
 mod lc7;
 mod lc1473;
 mod lc740;
+mod lc1482;
