@@ -5,3 +5,4 @@ mod lc1738;
 mod lc692;
 mod lc1035;
 mod lc810;
+mod lc1707;
