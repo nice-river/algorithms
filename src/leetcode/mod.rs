@@ -1,8 +1,6 @@
 pub mod leetcode;
-mod lc993;
-mod lc1442;
-mod lc1738;
-mod lc692;
-mod lc1035;
-mod lc810;
-mod lc1707;
+mod lc664;
+mod lc1787;
+mod lc1190;
+mod lc461;
+mod lc477;
