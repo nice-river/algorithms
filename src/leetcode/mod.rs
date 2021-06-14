@@ -7,3 +7,7 @@ mod lc1035;
 mod lc810;
 mod lc1707;
 mod lc474;
+mod lc279;
+mod lc1449;
+mod lc278;
+mod lc374;
