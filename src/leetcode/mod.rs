@@ -14,3 +14,5 @@ mod lc374;
 mod lc1239;
 mod lc1600;
 mod lc401;
+mod lc773;
+mod lc909;
