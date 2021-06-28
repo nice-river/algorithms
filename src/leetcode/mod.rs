@@ -16,3 +16,4 @@ mod lc1600;
 mod lc401;
 mod lc773;
 mod lc909;
+mod lc815;
