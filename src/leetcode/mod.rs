@@ -23,3 +23,5 @@ mod lc815;
 mod lc168;
 mod lcp07;
 mod lc1833;
+mod lc451;
+mod lc645;
