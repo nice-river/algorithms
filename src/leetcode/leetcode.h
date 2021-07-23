@@ -2,8 +2,8 @@
 // Created by Sinn on 6/4/2021.
 //
 
-#ifndef CP_IN_RUST_LEETCODE_H
-#define CP_IN_RUST_LEETCODE_H
+#ifndef LEETCODE_H
+#define LEETCODE_H
 
 #include <string>
 #include <vector>
@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <unordered_map>
+#include <unordered_set>
 using namespace std;
 
 //Definition for singly-linked list.
@@ -31,4 +33,4 @@ struct TreeNode {
 };
 
 
-#endif //CP_IN_RUST_LEETCODE_H
+#endif //LEETCODE_H

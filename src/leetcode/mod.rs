@@ -6,3 +6,6 @@ mod lc1846;
 mod offer53;
 mod offer42;
 mod iv10_02;
+mod lc1838;
+mod lc1877;
+mod lc1893;
