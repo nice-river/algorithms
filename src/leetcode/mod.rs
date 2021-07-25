@@ -9,3 +9,5 @@ mod iv10_02;
 mod lc1838;
 mod lc1877;
 mod lc1893;
+mod lc1736;
+mod lc1743;
