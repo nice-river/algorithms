@@ -4,3 +4,5 @@ mod lc551;
 mod lc552;
 mod lc345;
 mod lc541;
+mod lc443;
+mod lc789;
