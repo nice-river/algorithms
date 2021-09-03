@@ -29,8 +29,15 @@ impl Solution {
     }
 
     fn pick_index(&self) -> i32 {
-        let largest = *self.presum.last().unwrap();
-        let gen = (rand::random::<u32>() % largest as u32 + 1) as i32;
+        let largest = *self.presum.last().unwrap() as u32;
+        let diff = u32::MAX % largest;
+
+        let gen = loop {
+            let x = rand::random::<u32>();
+            if x > diff {
+                break ((x - diff) % largest + 1) as i32;
+            }
+        };
         let idx = lower_bound(&self.presum, 0, self.presum.len(), &gen);
         idx as i32 - 1
     }
