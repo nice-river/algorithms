@@ -4,3 +4,5 @@ mod lc165;
 mod offer22;
 mod iv17_14;
 pub mod leetcode;
+mod offer10;
+mod lc470;
