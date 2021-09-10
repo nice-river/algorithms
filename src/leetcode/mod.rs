@@ -1,8 +1,6 @@
-mod lc528;
-mod lc1109;
-mod lc165;
-mod offer22;
-mod iv17_14;
+mod lc1221;
+mod lc1894;
+mod lc502;
+mod lc68;
+mod lc704;
 pub mod leetcode;
-mod offer10;
-mod lc470;
