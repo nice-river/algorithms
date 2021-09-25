@@ -9,3 +9,4 @@ mod lc58;
 mod lc673;
 mod lc725;
 pub mod leetcode;
+mod lc583;
