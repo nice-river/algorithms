@@ -6,4 +6,4 @@ set(CMAKE_CXX_STANDARD 14)
 include_directories(.)
 include_directories(src)
 
-add_executable(algorithm src/leetcode/lc430.cpp)
+add_executable(algorithm src/leetcode/lc284.cpp)
