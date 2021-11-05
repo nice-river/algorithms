@@ -1,8 +1,5 @@
-mod lc240;
-mod lc260;
-mod lc301;
-mod lc335;
-mod lc496;
-mod lc500;
-mod lc869;
+mod lc1218;
+mod lc367;
+mod lc407;
+mod lc575;
 pub mod leetcode;
