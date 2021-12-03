@@ -1,8 +1,6 @@
-mod lc384;
-mod lc423;
-mod lc438;
-mod lc458;
-mod lc519;
-mod lc700;
-mod lc859;
+mod lc1005;
+mod lc1446;
+mod lc400;
+mod lc506;
+mod lc786;
 pub mod leetcode;
