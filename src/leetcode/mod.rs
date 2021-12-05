@@ -1,5 +1,7 @@
 mod lc1005;
 mod lc1446;
+mod lc372;
+mod lc383;
 mod lc400;
 mod lc506;
 mod lc786;
