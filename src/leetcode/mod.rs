@@ -1,6 +1,6 @@
-mod lc1995;
-mod lc472;
-mod lc507;
-mod lc825;
-mod lc846;
+mod lc1044;
+mod lc1154;
+mod lc1705;
+mod lc475;
+mod lc686;
 pub mod leetcode;
