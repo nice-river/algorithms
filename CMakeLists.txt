@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 project(algorithm)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_BUILD_TYPE Release)
 
 include_directories(.)
 include_directories(src)
 
-add_executable(algorithm src/leetcode/lc559.cpp)
+add_executable(algorithm src/main.cpp)
