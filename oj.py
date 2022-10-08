@@ -18,7 +18,7 @@ def codechef(action, problem):
         with open(os.path.join(folder, "Cargo.toml"), "w") as cargo:
             for i in range(len(lines)):
                 if lines[i].startswith("default-run"):
-                    lines[i] = f"default-run = \"{problem}\""
+                    lines[i] = f"default-run = \"{problem}\"\n"
             cargo.writelines(lines)
     elif action in ["r", "rm", "remove"]:
         try:
