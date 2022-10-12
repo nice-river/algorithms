@@ -75,10 +75,14 @@ impl<R: Read> Reader<R> {
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
-    let input = std::fs::File::open("src/input.txt")?;
+    // let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
 
-    for _ in 0..reader.read() {}
+    for _ in 0..reader.read() {
+        let l: i32 = reader.read();
+        let r: i32 = reader.read();
+        println!("{}", r - l + 1 + r - l);
+    }
 
     Ok(())
 }

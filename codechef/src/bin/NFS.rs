@@ -75,10 +75,20 @@ impl<R: Read> Reader<R> {
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
-    let input = std::fs::File::open("src/input.txt")?;
+    // let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
 
-    for _ in 0..reader.read() {}
+    for _ in 0..reader.read() {
+        let u: i32 = reader.read();
+        let v: i32 = reader.read();
+        let a: i32 = reader.read();
+        let s: i32 = reader.read();
+        if u * u - 2 * a * s > v * v {
+            println!("No");
+        } else {
+            println!("Yes");
+        }
+    }
 
     Ok(())
 }

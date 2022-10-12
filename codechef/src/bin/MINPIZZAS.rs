@@ -75,10 +75,23 @@ impl<R: Read> Reader<R> {
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
-    let input = std::fs::File::open("src/input.txt")?;
+    // let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
 
-    for _ in 0..reader.read() {}
+    for _ in 0..reader.read() {
+        let n: i64 = reader.read();
+        let k: i64 = reader.read();
+        let g = gcd(n, k);
+        println!("{}", n / g);
+    }
 
     Ok(())
+}
+
+fn gcd(a: i64, b: i64) -> i64 {
+    if b == 0 {
+        a
+    } else {
+        gcd(b, a % b)
+    }
 }
