@@ -76,13 +76,24 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
+use std::collections::HashMap;
+
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
     #[cfg(feature = "local")]
     let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
 
-    for _ in 0..reader.read() {}
+    let mut map = HashMap::new();
+
+    for _ in 0..reader.read() {
+        let s: String = reader.read();
+        let mut s = s.into_bytes();
+        s.sort();
+        *map.entry(s).or_insert(0) += 1;
+    }
+
+    println!("{}", map.iter().max_by_key(|(_, v)| **v).unwrap().1);
 
     Ok(())
 }

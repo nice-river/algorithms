@@ -3,7 +3,10 @@ name = "codechef"
 version = "0.1.0"
 authors = ["NiceRiver <forestniceriver@outlook.com>"]
 edition = "2018"
-default-run = "ALTER"
+default-run = "DIAMTREE"
 
 [dependencies]
 rand = "0.8"
+
+[features]
+local = []
