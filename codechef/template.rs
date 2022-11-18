@@ -1,9 +1,8 @@
-#![allow(non_snake_case)]
-#![allow(dead_code)]
+#![allow(non_snake_case, unused_imports, unused_variables, dead_code)]
 
 use std::{
     fmt::Debug,
-    io::{BufReader, Read},
+    io::{BufReader, Read, Write},
     str::FromStr,
 };
 
@@ -18,7 +17,7 @@ impl<R: Read> Reader<R> {
     fn new(inner: R) -> Self {
         Self {
             reader: BufReader::new(inner),
-            buf: vec![0; 4],
+            buf: vec![0; 128],
             pos: 0,
             len: 0,
         }
@@ -78,9 +77,12 @@ static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
+    let input = input.lock();
     #[cfg(feature = "local")]
     let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
+    let writer = std::io::stdout();
+    let mut writer = writer.lock();
 
     for _ in 0..reader.read() {}
 

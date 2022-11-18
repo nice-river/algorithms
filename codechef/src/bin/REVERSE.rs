@@ -3,7 +3,7 @@
 
 use std::{
     fmt::Debug,
-    io::{BufReader, Read},
+    io::{BufReader, Read, Write},
     str::FromStr,
 };
 
@@ -76,44 +76,40 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
-use std::collections::BinaryHeap;
+use std::collections::VecDeque;
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
+    let input = input.lock();
     #[cfg(feature = "local")]
     let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
+    let writer = std::io::stdout();
+    let mut writer = writer.lock();
 
-    for _ in 0..reader.read() {
-        let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
-            let u: usize = reader.read();
-            let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
-        }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
-        println!("{}", ans);
+    let n: usize = reader.read();
+    let m: usize = reader.read();
+    let mut gph = vec![vec![]; n + 1];
+    for _ in 0..m {
+        let u: usize = reader.read();
+        let v: usize = reader.read();
+        gph[u].push((v, 0));
+        gph[v].push((u, 1));
     }
 
-    Ok(())
-}
-
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
+    let mut que = VecDeque::new();
+    let mut dp = vec![-1; n + 1];
+    dp[1] = 0;
+    que.push_back(1);
+    while let Some(node) = que.pop_front() {
+        for &(nxt, k) in &gph[node] {
+            if dp[nxt] == -1 || dp[nxt] > dp[node] + k {
+                dp[nxt] = dp[node] + k;
+                que.push_back(nxt);
             }
         }
     }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
+
+    writeln!(writer, "{}", dp[n])?;
+    Ok(())
 }

@@ -76,8 +76,6 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
-use std::collections::BinaryHeap;
-
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
     #[cfg(feature = "local")]
@@ -86,34 +84,34 @@ fn main() -> std::io::Result<()> {
 
     for _ in 0..reader.read() {
         let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
+        let x: i64 = reader.read();
+        let mut vs = vec![0; n + 1];
+        for i in 1..=n {
+            vs[i] = reader.read::<i64>();
+        }
+        let mut gph = vec![vec![]; n + 1];
+        for _ in 1..n {
             let u: usize = reader.read();
             let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
+            gph[u].push(v);
+            gph[v].push(u);
         }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
-        println!("{}", ans);
+        let (r, c) = dfs(&gph, 1, 0, x, &vs);
+        println!("{}", r - c);
     }
-
     Ok(())
 }
 
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
-            }
+fn dfs(gph: &Vec<Vec<usize>>, node: usize, parent: usize, x: i64, vs: &Vec<i64>) -> (i64, i64) {
+    let mut r = vs[node];
+    let mut c = 0;
+    for &nxt in &gph[node] {
+        if nxt != parent {
+            let (subr, subc) = dfs(gph, nxt, node, x, vs);
+            r += subr;
+            c += subc;
         }
     }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
+    c = c.min(r + x);
+    (r, c)
 }

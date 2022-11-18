@@ -76,7 +76,7 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
-use std::collections::BinaryHeap;
+use std::collections::VecDeque;
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
@@ -86,34 +86,60 @@ fn main() -> std::io::Result<()> {
 
     for _ in 0..reader.read() {
         let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
+        let root: usize = reader.read();
+        let k: i64 = reader.read();
+        let mut tl = vec![0; n + 1];
+        for i in 1..=n {
+            tl[i] = reader.read();
+        }
+        let mut gph = vec![vec![]; n + 1];
+        for _ in 1..n {
             let u: usize = reader.read();
             let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
+            gph[u].push(v);
+            gph[v].push(u);
         }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
-        println!("{}", ans);
+        let mut res = tl.clone();
+        let mut que = VecDeque::with_capacity(n);
+        dfs(&gph, 0, root, &mut que, &tl, &mut res, &mut 0, k);
+        println!(
+            "{}",
+            tl.iter().zip(res.iter()).map(|(a, b)| a - b).sum::<i64>() * 2
+        );
     }
 
     Ok(())
 }
 
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
-            }
+fn dfs(
+    gph: &Vec<Vec<usize>>,
+    parent: usize,
+    node: usize,
+    que: &mut VecDeque<usize>,
+    tl: &Vec<i64>,
+    res: &mut Vec<i64>,
+    val: &mut i64,
+    k: i64,
+) {
+    *val = *val + tl[node];
+    que.push_back(node);
+    while *val > k {
+        let i = que.pop_front().unwrap();
+        if res[i] > (*val - k) {
+            que.push_front(i);
+            res[i] = res[i] - (*val - k);
+            *val = k;
+            break;
+        } else {
+            *val -= res[i];
+            res[i] = 0;
         }
     }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
+    for &nxt in &gph[node] {
+        if parent != nxt {
+            dfs(gph, node, nxt, que, tl, res, val, k);
+        }
+    }
+    que.pop_back();
+    *val = (*val - tl[node]).max(0);
 }

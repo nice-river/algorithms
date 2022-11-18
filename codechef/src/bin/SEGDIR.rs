@@ -76,7 +76,7 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
-use std::collections::BinaryHeap;
+use std::collections::HashMap;
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
@@ -86,34 +86,35 @@ fn main() -> std::io::Result<()> {
 
     for _ in 0..reader.read() {
         let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
-            let u: usize = reader.read();
-            let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
+        let mut map = HashMap::with_capacity(n + 1);
+        for _ in 0..n {
+            let l: i64 = reader.read();
+            let r: i64 = reader.read();
+            let v: i64 = reader.read();
+            map.entry(v).or_insert(vec![]).push((l, r));
         }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
-        println!("{}", ans);
+        let mut flag = true;
+        'outer: for (_, segs) in map.iter_mut() {
+            segs.sort();
+            let mut r0 = 0;
+            let mut r1 = 0;
+            for seg in segs {
+                if seg.0 > r0 {
+                    r0 = seg.1
+                } else if seg.0 > r1 {
+                    r1 = seg.1
+                } else {
+                    flag = false;
+                    break 'outer;
+                }
+            }
+        }
+        if flag {
+            println!("YES");
+        } else {
+            println!("NO");
+        }
     }
 
     Ok(())
-}
-
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
-            }
-        }
-    }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
 }

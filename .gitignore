@@ -4,3 +4,5 @@ Cargo.lock
 cmake-build-debug
 cmake-build-release
 .vscode
+build/
+**/a.out

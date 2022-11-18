@@ -2,8 +2,9 @@
 #![allow(dead_code)]
 
 use std::{
+    collections::VecDeque,
     fmt::Debug,
-    io::{BufReader, Read},
+    io::{self, BufReader, Read, Write},
     str::FromStr,
 };
 
@@ -76,44 +77,87 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
-use std::collections::BinaryHeap;
+use std::collections::HashSet;
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
+    let input = input.lock();
     #[cfg(feature = "local")]
     let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
+    let writer = io::stdout();
+    let mut writer = writer.lock();
 
-    for _ in 0..reader.read() {
+    'Test: for _ in 0..1 {
         let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
+        let e: usize = reader.read();
+        let mut gph = vec![VecDeque::new(); n + 1];
+        let mut roads = Vec::with_capacity(e + 1);
+        for i in 0..e {
             let u: usize = reader.read();
             let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
+            gph[u].push_back((i, v));
+            gph[v].push_back((i, u));
+            roads.push((u, v));
         }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
-        println!("{}", ans);
+
+        if e < n {
+            println!("NO");
+            continue 'Test;
+        }
+
+        for r in &gph {
+            if r.len() % 2 != 0 {
+                println!("NO");
+                continue 'Test;
+            }
+        }
+        let mut vis = vec![false; e];
+        let mut ans = HashSet::with_capacity(e + 1);
+        let mut path = Vec::with_capacity(e + 1);
+        dfs(&mut gph, 1, &mut vis, &mut path, &mut ans);
+
+        if ans.len() < roads.len() {
+            println!("NO");
+            continue 'Test;
+        }
+
+        println!("YES");
+        for road in roads {
+            if ans.contains(&road) {
+                writeln!(writer, "{} {}", road.0, road.1)?;
+            } else {
+                writeln!(writer, "{} {}", road.1, road.0)?;
+            }
+        }
     }
 
     Ok(())
 }
 
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
+fn dfs(
+    gph: &mut Vec<VecDeque<(usize, usize)>>,
+    node: usize,
+    vis: &mut Vec<bool>,
+    path: &mut Vec<usize>,
+    ans: &mut HashSet<(usize, usize)>,
+) {
+    while !gph[node].is_empty() {
+        let (i, nxt) = gph[node].pop_front().unwrap();
+        if !vis[i] {
+            vis[i] = true;
+            if path.is_empty() {
+                path.push(node);
             }
+            path.push(nxt);
+            dfs(gph, nxt, vis, path, ans);
         }
     }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
+
+    if !path.is_empty() {
+        for i in 1..path.len() {
+            ans.insert((path[i - 1], path[i]));
+        }
+        path.clear();
+    }
 }

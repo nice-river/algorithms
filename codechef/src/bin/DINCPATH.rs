@@ -3,7 +3,7 @@
 
 use std::{
     fmt::Debug,
-    io::{BufReader, Read},
+    io::{BufReader, Read, Write},
     str::FromStr,
 };
 
@@ -76,44 +76,53 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
-use std::collections::BinaryHeap;
+use std::collections::BTreeMap;
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
+    let input = input.lock();
     #[cfg(feature = "local")]
     let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
+    let writer = std::io::stdout();
+    let mut writer = writer.lock();
 
     for _ in 0..reader.read() {
         let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
+        let m: usize = reader.read();
+        let mut gph = BTreeMap::<i64, Vec<(usize, usize)>>::new();
+
+        let mut values = vec![0i64; n + 1];
+        for i in 1..=n {
+            values[i] = reader.read();
+        }
+        for _ in 0..m {
             let u: usize = reader.read();
             let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
+            if values[u] < values[v] {
+                gph.entry(values[v] - values[u]).or_insert_with(|| vec![]).push((u, v));
+            } else if values[u] > values[v] {
+                gph.entry(values[u] - values[v]).or_insert_with(|| vec![]).push((v, u));
+            }
         }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
-        println!("{}", ans);
+
+        let mut dp = vec![0; n + 1];
+
+        for (_, edges) in gph.into_iter() {
+            let mut dp_nxt = BTreeMap::new();
+            for (u, v) in edges {
+                if dp[v] < dp[u] + 1 {
+                    dp_nxt.insert(v, (*dp_nxt.get(&v).unwrap_or(&0)).max(dp[u] + 1));
+                }
+            }
+            for (k, v) in dp_nxt.into_iter() {
+                dp[k] = v;
+            }
+        }
+
+        let ans = dp.into_iter().max().unwrap();
+        writeln!(writer, "{}", ans + 1)?;
     }
 
     Ok(())
-}
-
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
-            }
-        }
-    }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
 }

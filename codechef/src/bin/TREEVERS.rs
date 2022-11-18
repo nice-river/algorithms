@@ -76,8 +76,6 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
-use std::collections::BinaryHeap;
-
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
     #[cfg(feature = "local")]
@@ -86,34 +84,50 @@ fn main() -> std::io::Result<()> {
 
     for _ in 0..reader.read() {
         let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
+        let mut ws = vec![0; n + 1];
+        for i in 1..=n {
+            ws[i] = reader.read();
+        }
+        let mut gph = vec![vec![]; n + 1];
+        for _ in 1..n {
             let u: usize = reader.read();
             let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
+            gph[u].push(v);
+            gph[v].push(u);
         }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
+        let ans = dfs(&gph, 0, 1, &ws).2;
         println!("{}", ans);
     }
 
     Ok(())
 }
 
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
-            }
+fn dfs(gph: &Vec<Vec<usize>>, parent: usize, node: usize, ws: &Vec<i64>) -> (i64, i64, i64) {
+    let mut zero = 0;
+    let mut one = 0;
+    if ws[node] == 0 {
+        zero += 1;
+    } else {
+        one += 1;
+    }
+    let mut s = 0;
+    let mut children = vec![];
+    for &nxt in &gph[node] {
+        if nxt != parent {
+            let (sub_zero, sub_one, sub_s) = dfs(gph, node, nxt, ws);
+            zero += sub_zero;
+            one += sub_one;
+            s += sub_s;
+            children.push((sub_zero, sub_one));
         }
     }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
+    children.sort_by(|&a, &b| (b.0 * (a.1 - a.0)).cmp(&(a.0 * (b.1 - b.0))));
+    let mut k = children.last().unwrap_or(&(0, 0)).0;
+    for &(sub_zero, sub_one) in children.iter().rev().skip(1) {
+        s += sub_one * k;
+        k += sub_zero;
+    }
+    s += ws[node] * k;
+
+    (zero, one, s)
 }

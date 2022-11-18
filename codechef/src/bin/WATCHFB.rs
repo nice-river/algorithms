@@ -1,9 +1,9 @@
-#![allow(non_snake_case)]
-#![allow(dead_code)]
+#![allow(non_snake_case, unused_imports, unused_variables, dead_code)]
 
 use std::{
     fmt::Debug,
-    io::{BufReader, Read},
+    fs::read,
+    io::{BufReader, Read, Write},
     str::FromStr,
 };
 
@@ -18,7 +18,7 @@ impl<R: Read> Reader<R> {
     fn new(inner: R) -> Self {
         Self {
             reader: BufReader::new(inner),
-            buf: vec![0; 4],
+            buf: vec![0; 128],
             pos: 0,
             len: 0,
         }
@@ -76,44 +76,41 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
-use std::collections::BinaryHeap;
-
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
+    let input = input.lock();
     #[cfg(feature = "local")]
     let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
+    let writer = std::io::stdout();
+    let mut writer = writer.lock();
 
     for _ in 0..reader.read() {
-        let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
-            let u: usize = reader.read();
-            let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
-        }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
-        println!("{}", ans);
-    }
-
-    Ok(())
-}
-
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
+        let mut x = 0;
+        let mut y = 0;
+        for _ in 0..reader.read() {
+            let t: u8 = reader.read();
+            let a: i32 = reader.read();
+            let b: i32 = reader.read();
+            if t == 1 || a == b {
+                x = a;
+                y = b;
+                writeln!(writer, "YES")?;
+            } else {
+                if a.min(b) >= x.max(y) {
+                    writeln!(writer, "NO")?;
+                } else if a < x || b < y {
+                    x = b;
+                    y = a;
+                    writeln!(writer, "YES")?;
+                } else {
+                    x = a;
+                    y = b;
+                    writeln!(writer, "YES")?;
+                }
             }
         }
     }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
+
+    Ok(())
 }

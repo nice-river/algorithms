@@ -3,7 +3,7 @@
 
 use std::{
     fmt::Debug,
-    io::{BufReader, Read},
+    io::{BufReader, Read, Write},
     str::FromStr,
 };
 
@@ -18,7 +18,7 @@ impl<R: Read> Reader<R> {
     fn new(inner: R) -> Self {
         Self {
             reader: BufReader::new(inner),
-            buf: vec![0; 4],
+            buf: vec![0; 128],
             pos: 0,
             len: 0,
         }
@@ -80,40 +80,49 @@ use std::collections::BinaryHeap;
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
+    let input = input.lock();
     #[cfg(feature = "local")]
     let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
+    let writer = std::io::stdout();
+    let mut writer = writer.lock();
 
     for _ in 0..reader.read() {
         let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
+        let m: usize = reader.read();
+        let mut gph = vec![vec![]; n + 1];
+        let mut heap = BinaryHeap::new();
+        let mut ans = vec![i64::MIN; n + 1];
+        for _ in 0..reader.read() {
+            let x: usize = reader.read();
+            let c: i64 = reader.read();
+            heap.push((-c, x));
+            ans[x] = -c;
+        }
+        for _ in 0..m {
             let u: usize = reader.read();
             let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
+            let c: i64 = reader.read();
+            gph[u].push((v, -c));
+            gph[v].push((u, -c));
         }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
-        println!("{}", ans);
+        while let Some((val, cur)) = heap.pop() {
+            if val < ans[cur] {
+                continue;
+            }
+            for &(nxt, cost) in &gph[cur] {
+                if val + cost > ans[nxt] {
+                    heap.push((val + cost, nxt));
+                    ans[nxt] = val + cost;
+                }
+            }
+        }
+        for i in 1..=n {
+            write!(writer, "{}", -ans[i])?;
+            write!(writer, " ")?;
+        }
+        writeln!(writer)?;
     }
 
     Ok(())
-}
-
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
-            }
-        }
-    }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
 }

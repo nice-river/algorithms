@@ -1,9 +1,8 @@
-#![allow(non_snake_case)]
-#![allow(dead_code)]
+#![allow(non_snake_case, unused_imports, unused_variables, dead_code)]
 
 use std::{
     fmt::Debug,
-    io::{BufReader, Read},
+    io::{BufReader, Read, Write},
     str::FromStr,
 };
 
@@ -18,7 +17,7 @@ impl<R: Read> Reader<R> {
     fn new(inner: R) -> Self {
         Self {
             reader: BufReader::new(inner),
-            buf: vec![0; 4],
+            buf: vec![0; 128],
             pos: 0,
             len: 0,
         }
@@ -76,44 +75,42 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
-use std::collections::BinaryHeap;
-
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
+    let input = input.lock();
     #[cfg(feature = "local")]
     let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
+    let writer = std::io::stdout();
+    let mut writer = writer.lock();
+
+    const B: usize = 60;
 
     for _ in 0..reader.read() {
         let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
-            let u: usize = reader.read();
-            let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
+        let q: usize = reader.read();
+        let mut arr = vec![0i64; n + 1];
+        let mut s = vec![vec![vec![0; 2]; B]; n + 1];
+        for i in 1..=n {
+            arr[i] = reader.read();
+            for b in 0..B {
+                s[i][b][0] = 1 - ((arr[i] >> b) & 1) + s[i - 1][b][0];
+                s[i][b][1] = ((arr[i] >> b) & 1) + s[i - 1][b][1];
+            }
         }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
-        println!("{}", ans);
+
+        for _ in 0..q {
+            let k: usize = reader.read();
+            let l1: usize = reader.read();
+            let r1: usize = reader.read();
+            let l2: usize = reader.read();
+            let r2: usize = reader.read();
+            let mut ans = 0;
+            ans += (s[r1][k][0] - s[l1 - 1][k][0]) * (s[r2][k][1] - s[l2 - 1][k][1]);
+            ans += (s[r1][k][1] - s[l1 - 1][k][1]) * (s[r2][k][0] - s[l2 - 1][k][0]);
+            writeln!(writer, "{}", ans)?;
+        }
     }
 
     Ok(())
-}
-
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
-            }
-        }
-    }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
 }

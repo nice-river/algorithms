@@ -76,7 +76,7 @@ impl<R: Read> Reader<R> {
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
-use std::collections::BinaryHeap;
+use std::convert::TryInto;
 
 fn main() -> std::io::Result<()> {
     let input = std::io::stdin();
@@ -84,36 +84,75 @@ fn main() -> std::io::Result<()> {
     let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
 
+    let n: usize = reader.read();
+    let mut dsu = DSU::new(n);
+
     for _ in 0..reader.read() {
-        let n: usize = reader.read();
-        let mut vis = vec![false; n + 1];
-        let mut graph = vec![vec![]; n + 1];
-        for _ in 0..n - 1 {
-            let u: usize = reader.read();
-            let v: usize = reader.read();
-            graph[u].push(v);
-            graph[v].push(u);
+        let t: i32 = reader.read();
+        match t {
+            1 => {
+                let a: usize = reader.read();
+                let b: usize = reader.read();
+                dsu.merge(a, b);
+            }
+            2 => {
+                let a: usize = reader.read();
+                let b: usize = reader.read();
+                if dsu.is_same_set(a, b) {
+                    println!("YES");
+                } else {
+                    println!("NO");
+                }
+            }
+            3 => {
+                println!("{}", dsu.set_count());
+            }
+            _ => unreachable!(),
         }
-        let mut ans = 0;
-        dfs(&graph, 1, &mut vis, &mut ans);
-        println!("{}", ans);
     }
 
     Ok(())
 }
 
-fn dfs(graph: &Vec<Vec<usize>>, node: usize, vis: &mut Vec<bool>, ans: &mut i32) -> i32 {
-    vis[node] = true;
-    let mut heap = BinaryHeap::new();
-    for &nxt_node in &graph[node] {
-        if !vis[nxt_node] {
-            heap.push(-dfs(graph, nxt_node, vis, ans));
-            if heap.len() > 2 {
-                heap.pop();
-            }
+struct DSU {
+    mark: Vec<usize>,
+    disjointed_sets: usize,
+}
+
+impl DSU {
+    fn new<T: TryInto<usize>>(n: T) -> Self {
+        let n = n.try_into().unwrap_or_else(|_| unreachable!());
+        Self {
+            mark: vec![0; n + 1],
+            disjointed_sets: n,
         }
     }
-    let d = -heap.iter().sum::<i32>();
-    *ans = std::cmp::max(d, *ans);
-    -heap.into_iter().min().unwrap_or(0) + 1
+
+    fn find<T: TryInto<usize> + Copy>(&mut self, x: T) -> usize {
+        let p = x.try_into().unwrap_or_else(|_| unreachable!());
+        if self.mark[p] == 0 {
+            p
+        } else {
+            let r = self.find(self.mark[p]);
+            self.mark[p] = r.try_into().unwrap_or_else(|_| unreachable!());
+            r
+        }
+    }
+
+    fn merge<T: TryInto<usize> + Copy>(&mut self, a: T, b: T) {
+        let u = self.find(a);
+        let v = self.find(b);
+        if u != v {
+            self.mark[u] = v;
+            self.disjointed_sets -= 1;
+        }
+    }
+
+    fn set_count(&self) -> usize {
+        self.disjointed_sets
+    }
+
+    fn is_same_set<T: TryInto<usize> + Copy>(&mut self, a: T, b: T) -> bool {
+        self.find(a) == self.find(b)
+    }
 }
