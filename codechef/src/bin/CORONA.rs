@@ -3,7 +3,7 @@
 
 use std::{
     fmt::Debug,
-    io::{BufReader, Read, Write},
+    io::{BufReader, BufWriter, Read, Write},
     str::FromStr,
 };
 
@@ -73,6 +73,26 @@ impl<R: Read> Reader<R> {
     }
 }
 
+struct Writer<W: Write> {
+    writer: BufWriter<W>,
+}
+
+impl<W: Write> Writer<W> {
+    fn new(inner: W) -> Self {
+        Self {
+            writer: BufWriter::new(inner),
+        }
+    }
+
+    fn get_mut_inner(&mut self) -> &'_ mut BufWriter<W> {
+        &mut self.writer
+    }
+
+    fn flush(&mut self) {
+        self.writer.flush().unwrap();
+    }
+}
+
 static DIRS4: [i32; 5] = [-1, 0, 1, 0, -1];
 static DIRS8: [i32; 9] = [-1, -1, 0, -1, 1, 0, 1, 1, -1];
 
@@ -84,8 +104,20 @@ fn main() -> std::io::Result<()> {
     #[cfg(feature = "local")]
     let input = std::fs::File::open("src/input.txt")?;
     let mut reader = Reader::new(input);
-    let writer = std::io::stdout();
-    let mut writer = writer.lock();
+    let output = std::io::stdout();
+    let output: std::io::StdoutLock = output.lock();
+    let mut writer = Writer::new(output);
+    macro_rules! fast_write {
+    ($($tt:expr),*) => {
+            write!(writer.get_mut_inner(), $($tt),*)?;
+    };
+}
+
+    macro_rules! fast_writeln {
+    ($($tt:expr),*) => {
+            writeln!(writer.get_mut_inner(), $($tt),*)?;
+    };
+}
 
     for _ in 0..reader.read() {
         let n: usize = reader.read();
@@ -118,11 +150,12 @@ fn main() -> std::io::Result<()> {
             }
         }
         for i in 1..=n {
-            write!(writer, "{}", -ans[i])?;
-            write!(writer, " ")?;
+            fast_write!("{}", -ans[i]);
+            fast_write!(" ");
         }
-        writeln!(writer)?;
+        fast_writeln!();
     }
 
+    writer.flush();
     Ok(())
 }

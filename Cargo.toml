@@ -1,5 +1,4 @@
 [workspace]
-members = [
-    "others",
-    "codechef",
-]
+members = ["others", "codechef", "codeforces", "data_structures"]
+
+default-members = ["codeforces"]
