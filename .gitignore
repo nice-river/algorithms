@@ -6,3 +6,5 @@ cmake-build-release
 .vscode
 build/
 **/a.out
+*.svg
+perf*
