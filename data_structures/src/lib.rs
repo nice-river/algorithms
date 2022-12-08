@@ -23,7 +23,7 @@ mod tests {
     fn test_remove() {
         let mut tree = crate::rbtree::RedBlackTree::new();
         // let mut tree = BTreeMap::new();
-        let n = 4000000;
+        let n = 400;
         let mut arr = (1..=n).collect::<Vec<usize>>();
         arr.shuffle(&mut rand::thread_rng());
         for &v in &arr {

@@ -356,6 +356,30 @@ where
     }
 }
 
+impl<K, V> Drop for RedBlackTree<K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    fn drop(&mut self) {
+        if self.root.is_null() {
+            return;
+        }
+        let mut stk = Vec::with_capacity(32.min(self.size));
+        stk.push(self.root);
+        while let Some(node) = stk.pop() {
+            unsafe {
+                if !(*node).child[0].is_null() {
+                    stk.push((*node).child[0]);
+                }
+                if !(*node).child[1].is_null() {
+                    stk.push((*node).child[1]);
+                }
+                drop(Box::from_raw(node));
+            }
+        }
+    }
+}
+
 impl<K, V> RedBlackTree<K, V>
 where
     K: PartialEq + Eq + PartialOrd + Ord + Copy + Display,
