@@ -51,6 +51,18 @@ enum Color {
     Black,
 }
 
+impl Color {
+    #[inline]
+    fn is_red(&self) -> bool {
+        self == &Color::Red
+    }
+
+    #[inline]
+    fn is_black(&self) -> bool {
+        !self.is_red()
+    }
+}
+
 impl Display for Color {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -85,8 +97,8 @@ where
         }
     }
 
-    fn get_side(&self, parent: &TreeNode<K, V>) -> Side {
-        if (*parent).child[0] as *const _ == self as *const _ {
+    fn get_side(&self, parent: *mut TreeNode<K, V>) -> Side {
+        if unsafe { (*parent).child[0] } as *const _ == self as *const _ {
             Side::Left
         } else {
             Side::Right
@@ -99,6 +111,7 @@ where
     K: PartialEq + Eq + PartialOrd + Ord,
 {
     root: *mut TreeNode<K, V>,
+    size: usize,
 }
 
 impl<K, V> RedBlackTree<K, V>
@@ -108,7 +121,13 @@ where
     pub fn new() -> Self {
         Self {
             root: ptr::null_mut(),
+            size: 0,
         }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.size
     }
 
     pub fn insert(&mut self, key: K, val: V) -> Option<V> {
@@ -130,6 +149,7 @@ where
                 node = unsafe { (*node).child[Side::Left] };
             }
         }
+        self.size += 1;
         let boxed_node = Box::new(TreeNode::new(key, val));
         node = Box::leak(boxed_node) as *mut _;
         self.insert_helper(node, parent, side);
@@ -151,7 +171,7 @@ where
             (*node).parent = parent;
             (*parent).child[side] = node;
             loop {
-                if (*parent).color == Color::Black {
+                if (*parent).color.is_black() {
                     return;
                 }
                 // from now on parent.color is Red
@@ -160,10 +180,10 @@ where
                     (*parent).color = Color::Black;
                     return;
                 }
-                let parent_side = (*parent).get_side(&*grandparent);
+                let parent_side = (*parent).get_side(grandparent);
                 let uncle = (*grandparent).child[parent_side.flip()];
-                if uncle.is_null() || (*uncle).color == Color::Black {
-                    let node_side = (*node).get_side(&*parent);
+                if uncle.is_null() || (*uncle).color.is_black() {
+                    let node_side = (*node).get_side(parent);
                     if node_side != parent_side {
                         self.rotate(parent, parent_side);
                         parent = (*grandparent).child[parent_side];
@@ -185,7 +205,134 @@ where
         }
     }
 
-    #[inline]
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        let mut parent = ptr::null_mut();
+        let mut node = self.root;
+        let mut side = Side::Left;
+        while !node.is_null() {
+            let node_key = unsafe { &(*node).key };
+            if node_key == key {
+                break;
+            } else if node_key < &key {
+                parent = node;
+                side = Side::Right;
+                node = unsafe { (*node).child[Side::Right] };
+            } else {
+                parent = node;
+                side = Side::Left;
+                node = unsafe { (*node).child[Side::Left] };
+            }
+        }
+        if node.is_null() {
+            return None;
+        }
+        self.size -= 1;
+        unsafe {
+            loop {
+                if (*node).child[0].is_null() && (*node).child[1].is_null() {
+                    if self.root == node {
+                        self.root = ptr::null_mut();
+                        return Some(Self::free_node(node));
+                    } else if (*node).color.is_red() {
+                        (*parent).child[side] = ptr::null_mut();
+                        return Some(Self::free_node(node));
+                    } else {
+                        let v = Some(Self::free_node(node));
+                        (*parent).child[side] = ptr::null_mut();
+                        self.remove_helper(parent, side);
+                        return v;
+                    }
+                } else if !(*node).child[0].is_null() && !(*node).child[1].is_null() {
+                    let mut biggest_less = (*node).child[0];
+                    while !(*biggest_less).child[1].is_null() {
+                        biggest_less = (*biggest_less).child[1];
+                    }
+                    std::mem::swap(&mut (*node).key, &mut (*biggest_less).key);
+                    std::mem::swap(&mut (*node).val, &mut (*biggest_less).val);
+                    parent = (*biggest_less).parent;
+                    side = (*biggest_less).get_side(parent);
+                    node = biggest_less;
+                } else if !(*node).child[0].is_null() {
+                    if !parent.is_null() {
+                        (*parent).child[side] = (*node).child[0];
+                    }
+                    (*(*node).child[0]).parent = parent;
+                    (*(*node).child[0]).color = Color::Black;
+                    if self.root == node {
+                        self.root = (*node).child[0];
+                    }
+                    return Some(Self::free_node(node));
+                } else {
+                    if !parent.is_null() {
+                        (*parent).child[side] = (*node).child[1];
+                    }
+                    (*(*node).child[1]).parent = parent;
+                    (*(*node).child[1]).color = Color::Black;
+                    if self.root == node {
+                        self.root = (*node).child[1];
+                    }
+                    return Some(Self::free_node(node));
+                }
+            }
+        }
+    }
+
+    fn remove_helper(&mut self, mut parent: *mut TreeNode<K, V>, mut side: Side) {
+        unsafe {
+            let mut sibling = (*parent).child[side.flip()];
+            let mut distant_nephew = (*sibling).child[side.flip()];
+            let mut close_nephew = (*sibling).child[side];
+            loop {
+                if (*sibling).color.is_red() {
+                    self.rotate(parent, side);
+                    (*parent).color = Color::Red;
+                    (*sibling).color = Color::Black;
+                    sibling = close_nephew;
+                    distant_nephew = (*sibling).child[side.flip()];
+                    close_nephew = (*sibling).child[side];
+                } else if !distant_nephew.is_null() && (*distant_nephew).color.is_red() {
+                    self.rotate(parent, side);
+                    (*sibling).color = (*parent).color;
+                    (*parent).color = Color::Black;
+                    (*distant_nephew).color = Color::Black;
+                    return;
+                } else if !close_nephew.is_null() && (*close_nephew).color.is_red() {
+                    self.rotate(sibling, side.flip());
+                    (*sibling).color = Color::Red;
+                    (*close_nephew).color = Color::Black;
+                    distant_nephew = sibling;
+                    sibling = close_nephew;
+                    self.rotate(parent, side);
+                    (*sibling).color = (*parent).color;
+                    (*parent).color = Color::Black;
+                    (*distant_nephew).color = Color::Black;
+                    return;
+                } else if (*parent).color.is_red() {
+                    (*sibling).color = Color::Red;
+                    (*parent).color = Color::Black;
+                    return;
+                } else {
+                    (*sibling).color = Color::Red;
+                    if (*parent).parent.is_null() {
+                        break;
+                    }
+                    side = (*parent).get_side((*parent).parent);
+                    parent = (*parent).parent;
+                    sibling = (*parent).child[side.flip()];
+                    distant_nephew = (*sibling).child[side.flip()];
+                    close_nephew = (*sibling).child[side];
+                }
+            }
+        }
+    }
+
+    fn free_node(node: *mut TreeNode<K, V>) -> V {
+        unsafe {
+            let boxed_node = Box::from_raw(node);
+            boxed_node.val
+        }
+    }
+
     fn rotate(&mut self, node: *mut TreeNode<K, V>, side: Side) -> *mut TreeNode<K, V> {
         unsafe {
             let parent = (*node).parent;
@@ -199,7 +346,7 @@ where
             (*flip_child).parent = parent;
             (*node).parent = flip_child;
             if !parent.is_null() {
-                let node_side = (*node).get_side(&*parent);
+                let node_side = (*node).get_side(parent);
                 (*parent).child[node_side] = flip_child;
             } else {
                 self.root = flip_child;

@@ -10,7 +10,5 @@ fn main() {
     for &v in &arr {
         tree.insert(v, v);
     }
-    dbg!(tree.cmp_times);
-    dbg!(tree.cmp_times as f64 / n as f64);
     dbg!((n as f64).log2());
 }
