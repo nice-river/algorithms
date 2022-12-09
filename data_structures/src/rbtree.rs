@@ -1,5 +1,6 @@
 use std::{
     fmt::{Debug, Display},
+    ops::{Index, IndexMut},
     ptr,
 };
 
@@ -19,11 +20,8 @@ impl Side {
     }
 }
 
-impl<K, V> std::ops::Index<Side> for [*mut TreeNode<K, V>]
-where
-    K: PartialEq + Eq + PartialOrd + Ord,
-{
-    type Output = *mut TreeNode<K, V>;
+impl<T> Index<Side> for [T] {
+    type Output = T;
 
     fn index(&self, index: Side) -> &Self::Output {
         match index {
@@ -33,10 +31,7 @@ where
     }
 }
 
-impl<K, V> std::ops::IndexMut<Side> for [*mut TreeNode<K, V>]
-where
-    K: PartialEq + Eq + PartialOrd + Ord,
-{
+impl<T> IndexMut<Side> for [T] {
     fn index_mut(&mut self, index: Side) -> &mut Self::Output {
         match index {
             Side::Left => &mut self[0],
@@ -81,6 +76,7 @@ where
     color: Color,
     parent: *mut TreeNode<K, V>,
     child: [*mut TreeNode<K, V>; 2],
+    subtree_sz: [usize; 2],
 }
 
 impl<K, V> TreeNode<K, V>
@@ -94,6 +90,7 @@ where
             color: Color::Red,
             parent: ptr::null_mut(),
             child: [ptr::null_mut(); 2],
+            subtree_sz: [0, 0],
         }
     }
 
@@ -130,23 +127,89 @@ where
         self.size
     }
 
+    pub fn get(&self, key: &K) -> Option<&V> {
+        let mut node = self.root;
+        unsafe {
+            while !node.is_null() {
+                let node_key = &(*node).key;
+                if node_key == key {
+                    return Some(&(*node).val);
+                } else if node_key < &key {
+                    node = (*node).child[Side::Right];
+                } else {
+                    node = (*node).child[Side::Left];
+                }
+            }
+        }
+        None
+    }
+
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        let mut node = self.root;
+        unsafe {
+            while !node.is_null() {
+                let node_key = &(*node).key;
+                if node_key == key {
+                    return Some(&mut (*node).val);
+                } else if node_key < &key {
+                    node = (*node).child[Side::Right];
+                } else {
+                    node = (*node).child[Side::Left];
+                }
+            }
+        }
+        None
+    }
+
+    pub fn kth_smallest_key(&self, mut kth: usize) -> Option<&K> {
+        if kth > self.len() {
+            return None;
+        }
+        let mut node = self.root;
+        unsafe {
+            while !node.is_null() {
+                if (*node).subtree_sz[0] + 1 == kth {
+                    return Some(&(*node).key);
+                } else if (*node).subtree_sz[0] + 1 < kth {
+                    kth -= (*node).subtree_sz[0] + 1;
+                    node = (*node).child[Side::Right];
+                } else {
+                    node = (*node).child[Side::Left];
+                }
+            }
+        }
+        unreachable!();
+    }
+
     pub fn insert(&mut self, key: K, val: V) -> Option<V> {
-        let mut parent = ptr::null_mut();
+        let mut parent: *mut TreeNode<K, V> = ptr::null_mut();
         let mut node = self.root;
         let mut side = Side::Left;
-        while !node.is_null() {
-            let node_key = unsafe { &(*node).key };
-            if node_key == &key {
-                let old_val = std::mem::replace(unsafe { &mut (*node).val }, val);
-                return Some(old_val);
-            } else if node_key < &key {
-                parent = node;
-                side = Side::Right;
-                node = unsafe { (*node).child[Side::Right] };
-            } else {
-                parent = node;
-                side = Side::Left;
-                node = unsafe { (*node).child[Side::Left] };
+        unsafe {
+            while !node.is_null() {
+                let node_key = &(*node).key;
+                if node_key == &key {
+                    while !parent.is_null() {
+                        if &(*parent).key > &key {
+                            (*parent).subtree_sz[Side::Left] -= 1;
+                        } else {
+                            (*parent).subtree_sz[Side::Right] -= 1;
+                        }
+                        parent = (*parent).parent;
+                    }
+                    let old_val = std::mem::replace(&mut (*node).val, val);
+                    return Some(old_val);
+                } else if node_key < &key {
+                    (*node).subtree_sz[Side::Right] += 1;
+                    parent = node;
+                    side = Side::Right;
+                    node = (*node).child[Side::Right];
+                } else {
+                    (*node).subtree_sz[Side::Left] += 1;
+                    parent = node;
+                    side = Side::Left;
+                    node = (*node).child[Side::Left];
+                }
             }
         }
         self.size += 1;
@@ -209,21 +272,36 @@ where
         let mut parent = ptr::null_mut();
         let mut node = self.root;
         let mut side = Side::Left;
-        while !node.is_null() {
-            let node_key = unsafe { &(*node).key };
-            if node_key == key {
-                break;
-            } else if node_key < &key {
-                parent = node;
-                side = Side::Right;
-                node = unsafe { (*node).child[Side::Right] };
-            } else {
-                parent = node;
-                side = Side::Left;
-                node = unsafe { (*node).child[Side::Left] };
+        unsafe {
+            while !node.is_null() {
+                let node_key = &(*node).key;
+                if node_key == key {
+                    break;
+                } else if node_key < &key {
+                    (*node).subtree_sz[Side::Right] -= 1;
+                    parent = node;
+                    side = Side::Right;
+                    node = (*node).child[Side::Right];
+                } else {
+                    (*node).subtree_sz[Side::Left] -= 1;
+                    parent = node;
+                    side = Side::Left;
+                    node = (*node).child[Side::Left];
+                }
             }
         }
         if node.is_null() {
+            unsafe {
+                while !parent.is_null() {
+                    if &(*parent).key > &key {
+                        (*parent).subtree_sz[Side::Left] += 1;
+                    } else {
+                        (*parent).subtree_sz[Side::Right] += 1;
+                    }
+                    parent = (*parent).parent;
+                }
+            }
+
             return None;
         }
         self.size -= 1;
@@ -243,8 +321,10 @@ where
                         return v;
                     }
                 } else if !(*node).child[0].is_null() && !(*node).child[1].is_null() {
+                    (*node).subtree_sz[0] -= 1;
                     let mut biggest_less = (*node).child[0];
                     while !(*biggest_less).child[1].is_null() {
+                        (*biggest_less).subtree_sz[1] -= 1;
                         biggest_less = (*biggest_less).child[1];
                     }
                     std::mem::swap(&mut (*node).key, &mut (*biggest_less).key);
@@ -340,10 +420,15 @@ where
             let grandchild = (*flip_child).child[side];
             (*node).child[side.flip()] = grandchild;
             if !grandchild.is_null() {
+                (*node).subtree_sz[side.flip()] =
+                    (*grandchild).subtree_sz[0] + (*grandchild).subtree_sz[1] + 1;
                 (*grandchild).parent = node;
+            } else {
+                (*node).subtree_sz[side.flip()] = 0;
             }
             (*flip_child).child[side] = node;
             (*flip_child).parent = parent;
+            (*flip_child).subtree_sz[side] = (*node).subtree_sz[0] + (*node).subtree_sz[1] + 1;
             (*node).parent = flip_child;
             if !parent.is_null() {
                 let node_side = (*node).get_side(parent);
@@ -382,7 +467,7 @@ where
 
 impl<K, V> RedBlackTree<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord + Copy + Display,
+    K: PartialEq + Eq + PartialOrd + Ord + Copy + Debug + Display,
 {
     pub fn bfs(&self) -> Vec<Vec<String>> {
         use std::collections::VecDeque;
@@ -402,7 +487,12 @@ where
                 } else {
                     all_null = false;
                     unsafe {
-                        row.push(format!("{}{}", (*node).key, (*node).color));
+                        row.push(format!(
+                            "{}{} {:?}",
+                            (*node).key,
+                            (*node).color,
+                            (*node).subtree_sz
+                        ));
                         que[nxt].push_back((*node).child[0]);
                         que[nxt].push_back((*node).child[1]);
                     }
