@@ -1,5 +1,6 @@
 use std::{
     fmt::{Debug, Display},
+    marker::PhantomData,
     ops::{Index, IndexMut},
     ptr,
 };
@@ -77,6 +78,8 @@ where
     parent: *mut TreeNode<K, V>,
     child: [*mut TreeNode<K, V>; 2],
     subtree_sz: [usize; 2],
+    next: *mut TreeNode<K, V>,
+    prev: *mut TreeNode<K, V>,
 }
 
 impl<K, V> TreeNode<K, V>
@@ -91,6 +94,8 @@ where
             parent: ptr::null_mut(),
             child: [ptr::null_mut(); 2],
             subtree_sz: [0, 0],
+            next: ptr::null_mut(),
+            prev: ptr::null_mut(),
         }
     }
 
@@ -113,7 +118,7 @@ where
 
 impl<K, V> RedBlackTree<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord + Copy,
+    K: PartialEq + Eq + PartialOrd + Ord,
 {
     pub fn new() -> Self {
         Self {
@@ -215,24 +220,40 @@ where
         self.size += 1;
         let boxed_node = Box::new(TreeNode::new(key, val));
         node = Box::leak(boxed_node) as *mut _;
-        self.insert_helper(node, parent, side);
-        None
-    }
-
-    fn insert_helper(
-        &mut self,
-        mut node: *mut TreeNode<K, V>,
-        mut parent: *mut TreeNode<K, V>,
-        side: Side,
-    ) {
         if parent.is_null() {
             self.root = node;
-            return;
+            return None;
         }
         unsafe {
             (*node).color = Color::Red;
             (*node).parent = parent;
             (*parent).child[side] = node;
+            match side {
+                Side::Left => {
+                    if !(*parent).prev.is_null() {
+                        (*(*parent).prev).next = node;
+                    }
+                    (*node).prev = (*parent).prev;
+                    (*node).next = parent;
+                    (*parent).prev = node;
+                }
+                Side::Right => {
+                    if !(*parent).next.is_null() {
+                        (*(*parent).next).prev = node;
+                    }
+                    (*node).next = (*parent).next;
+                    (*node).prev = parent;
+                    (*parent).next = node;
+                }
+            }
+        }
+
+        self.insert_helper(node, parent);
+        None
+    }
+
+    fn insert_helper(&mut self, mut node: *mut TreeNode<K, V>, mut parent: *mut TreeNode<K, V>) {
+        unsafe {
             loop {
                 if (*parent).color.is_black() {
                     return;
@@ -408,6 +429,14 @@ where
 
     fn free_node(node: *mut TreeNode<K, V>) -> V {
         unsafe {
+            let prev = (*node).prev;
+            let next = (*node).next;
+            if !prev.is_null() {
+                (*prev).next = next;
+            }
+            if !next.is_null() {
+                (*next).prev = prev;
+            }
             let boxed_node = Box::from_raw(node);
             boxed_node.val
         }
@@ -439,6 +468,143 @@ where
             flip_child
         }
     }
+
+    pub fn iter(&self) -> RedBlackTreeIter<K, V> {
+        let mut head = self.root;
+        if !head.is_null() {
+            unsafe {
+                while !(*head).child[Side::Left].is_null() {
+                    head = (*head).child[Side::Left];
+                }
+            }
+        }
+        let mut tail = self.root;
+        if !tail.is_null() {
+            unsafe {
+                while !(*tail).child[Side::Right].is_null() {
+                    tail = (*tail).child[Side::Right];
+                }
+            }
+        }
+        RedBlackTreeIter {
+            head,
+            tail,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn iter_mut(&mut self) -> RedBlackTreeIterMut<K, V> {
+        let mut head = self.root;
+        if !head.is_null() {
+            unsafe {
+                while !(*head).child[Side::Left].is_null() {
+                    head = (*head).child[Side::Left];
+                }
+            }
+        }
+        let mut tail = self.root;
+        if !tail.is_null() {
+            unsafe {
+                while !(*tail).child[Side::Right].is_null() {
+                    tail = (*tail).child[Side::Right];
+                }
+            }
+        }
+        RedBlackTreeIterMut {
+            head,
+            tail,
+            _tree: self,
+        }
+    }
+}
+
+pub struct RedBlackTreeIter<'a, K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    head: *mut TreeNode<K, V>,
+    tail: *mut TreeNode<K, V>,
+    _phantom: PhantomData<&'a RedBlackTree<K, V>>,
+}
+
+impl<'a, K, V> Iterator for RedBlackTreeIter<'a, K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    type Item = (&'a K, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.head.is_null() {
+            None
+        } else {
+            unsafe {
+                let ret = Some((&(*self.head).key, &(*self.head).val));
+                self.head = (*self.head).next;
+                ret
+            }
+        }
+    }
+}
+
+impl<'a, K, V> DoubleEndedIterator for RedBlackTreeIter<'a, K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.tail.is_null() {
+            None
+        } else {
+            unsafe {
+                let ret = Some((&(*self.tail).key, &(*self.tail).val));
+                self.tail = (*self.tail).prev;
+                ret
+            }
+        }
+    }
+}
+pub struct RedBlackTreeIterMut<'a, K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    head: *mut TreeNode<K, V>,
+    tail: *mut TreeNode<K, V>,
+    _tree: &'a mut RedBlackTree<K, V>,
+}
+
+impl<'a, K, V> Iterator for RedBlackTreeIterMut<'a, K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    type Item = (&'a K, &'a mut V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.head.is_null() {
+            None
+        } else {
+            unsafe {
+                let ret = Some((&(*self.head).key, &mut (*self.head).val));
+                self.head = (*self.head).next;
+                ret
+            }
+        }
+    }
+}
+
+impl<'a, K, V> DoubleEndedIterator for RedBlackTreeIterMut<'a, K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.tail.is_null() {
+            None
+        } else {
+            unsafe {
+                let ret = Some((&(*self.tail).key, &mut (*self.tail).val));
+                self.tail = (*self.tail).prev;
+                ret
+            }
+        }
+    }
 }
 
 impl<K, V> Drop for RedBlackTree<K, V>
@@ -461,6 +627,95 @@ where
                 }
                 drop(Box::from_raw(node));
             }
+        }
+    }
+}
+
+pub struct RedBlackTreeIntoIter<K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    head: *mut TreeNode<K, V>,
+    tail: *mut TreeNode<K, V>,
+    tree: RedBlackTree<K, V>,
+}
+
+impl<K, V> Iterator for RedBlackTreeIntoIter<K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    type Item = (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.head.is_null() {
+            self.tree.root = ptr::null_mut();
+            None
+        } else {
+            unsafe {
+                let boxed_node = Box::from_raw(self.head);
+                self.head = boxed_node.next;
+                if !self.head.is_null() {
+                    (*self.head).prev = ptr::null_mut();
+                }
+                let key = boxed_node.key;
+                let val = boxed_node.val;
+                Some((key, val))
+            }
+        }
+    }
+}
+
+impl<K, V> DoubleEndedIterator for RedBlackTreeIntoIter<K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.tail.is_null() {
+            self.tree.root = ptr::null_mut();
+            None
+        } else {
+            unsafe {
+                let boxed_node = Box::from_raw(self.tail);
+                self.tail = boxed_node.prev;
+                if !self.tail.is_null() {
+                    (*self.tail).next = ptr::null_mut();
+                }
+                let key = boxed_node.key;
+                let val = boxed_node.val;
+                Some((key, val))
+            }
+        }
+    }
+}
+
+impl<K, V> IntoIterator for RedBlackTree<K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    type Item = (K, V);
+    type IntoIter = RedBlackTreeIntoIter<K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let mut head = self.root;
+        if !head.is_null() {
+            unsafe {
+                while !(*head).child[Side::Left].is_null() {
+                    head = (*head).child[Side::Left];
+                }
+            }
+        }
+        let mut tail = self.root;
+        if !tail.is_null() {
+            unsafe {
+                while !(*tail).child[Side::Right].is_null() {
+                    tail = (*tail).child[Side::Right];
+                }
+            }
+        }
+        RedBlackTreeIntoIter {
+            head,
+            tail,
+            tree: self,
         }
     }
 }
@@ -504,6 +759,7 @@ where
             res.push(row);
             cur ^= 1;
         }
+        dbg!(&res);
         res
     }
 
