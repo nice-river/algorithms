@@ -720,6 +720,22 @@ where
     }
 }
 
+impl<K, V> Drop for RedBlackTreeIntoIter<K, V>
+where
+    K: PartialEq + Eq + PartialOrd + Ord,
+{
+    fn drop(&mut self) {
+        while !self.head.is_null() {
+            unsafe {
+                let boxed_node = Box::from_raw(self.head);
+                self.head = boxed_node.next;
+                drop(boxed_node);
+            }
+        }
+        self.tree.root = ptr::null_mut();
+    }
+}
+
 impl<K, V> RedBlackTree<K, V>
 where
     K: PartialEq + Eq + PartialOrd + Ord + Copy + Debug + Display,

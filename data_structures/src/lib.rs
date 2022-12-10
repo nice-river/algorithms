@@ -134,8 +134,8 @@ mod tests {
                 assert_eq!(x, y);
                 drop(x);
                 drop(y);
-                let x = stdtree.into_iter().rev().collect::<Vec<_>>();
-                let y = rbtree.into_iter().rev().collect::<Vec<_>>();
+                let x = stdtree.into_iter().rev().take(n as usize / 2).collect::<Vec<_>>();
+                let y = rbtree.into_iter().rev().take(n as usize / 2).collect::<Vec<_>>();
                 assert_eq!(x, y);
             }
         }
