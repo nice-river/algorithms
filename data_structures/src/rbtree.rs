@@ -1,7 +1,8 @@
 use std::{
+    borrow::Borrow,
     fmt::{Debug, Display},
     marker::PhantomData,
-    ops::{Index, IndexMut},
+    ops::{Bound, Index, IndexMut, RangeBounds},
     ptr,
 };
 
@@ -470,22 +471,8 @@ where
     }
 
     pub fn iter(&self) -> RedBlackTreeIter<K, V> {
-        let mut head = self.root;
-        if !head.is_null() {
-            unsafe {
-                while !(*head).child[Side::Left].is_null() {
-                    head = (*head).child[Side::Left];
-                }
-            }
-        }
-        let mut tail = self.root;
-        if !tail.is_null() {
-            unsafe {
-                while !(*tail).child[Side::Right].is_null() {
-                    tail = (*tail).child[Side::Right];
-                }
-            }
-        }
+        let head = self.find_head(Bound::Unbounded);
+        let tail = self.find_tail(Bound::Unbounded);
         RedBlackTreeIter {
             head,
             tail,
@@ -494,27 +481,159 @@ where
     }
 
     pub fn iter_mut(&mut self) -> RedBlackTreeIterMut<K, V> {
-        let mut head = self.root;
-        if !head.is_null() {
-            unsafe {
-                while !(*head).child[Side::Left].is_null() {
-                    head = (*head).child[Side::Left];
-                }
-            }
-        }
-        let mut tail = self.root;
-        if !tail.is_null() {
-            unsafe {
-                while !(*tail).child[Side::Right].is_null() {
-                    tail = (*tail).child[Side::Right];
-                }
-            }
-        }
+        let head = self.find_head(Bound::Unbounded);
+        let tail = self.find_tail(Bound::Unbounded);
         RedBlackTreeIterMut {
             head,
             tail,
             _tree: self,
         }
+    }
+
+    pub fn range<T, R>(&self, range: R) -> RedBlackTreeIter<K, V>
+    where
+        T: Ord + ?Sized,
+        K: Borrow<T> + Debug,
+        R: RangeBounds<T>,
+    {
+        let head = self.find_head(range.start_bound());
+        let tail = self.find_tail(range.end_bound());
+        RedBlackTreeIter {
+            head,
+            tail,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn range_mut<T, R>(&mut self, range: R) -> RedBlackTreeIterMut<K, V>
+    where
+        T: Ord + ?Sized,
+        K: Borrow<T>,
+        R: RangeBounds<T>,
+    {
+        let head = self.find_head(range.start_bound());
+        let tail = self.find_tail(range.end_bound());
+        RedBlackTreeIterMut {
+            head,
+            tail,
+            _tree: self,
+        }
+    }
+
+    fn find_head<T>(&self, bound: Bound<&T>) -> *mut TreeNode<K, V>
+    where
+        T: Ord + ?Sized,
+        K: Borrow<T>,
+    {
+        let mut node = self.root;
+        if node.is_null() {
+            return node;
+        }
+        unsafe {
+            match bound {
+                Bound::Unbounded => {
+                    while !(*node).child[0].is_null() {
+                        node = (*node).child[0];
+                    }
+                }
+                Bound::Included(bound) => {
+                    let mut ans = ptr::null_mut();
+                    while !node.is_null() {
+                        match (*node).key.borrow().cmp(bound) {
+                            std::cmp::Ordering::Equal => {
+                                ans = node;
+                                node = (*node).child[Side::Left];
+                            }
+                            std::cmp::Ordering::Less => {
+                                node = (*node).child[Side::Right];
+                            }
+                            std::cmp::Ordering::Greater => {
+                                ans = node;
+                                node = (*node).child[Side::Left];
+                            }
+                        }
+                    }
+                    node = ans;
+                }
+                Bound::Excluded(bound) => {
+                    let mut ans = ptr::null_mut();
+                    while !node.is_null() {
+                        match (*node).key.borrow().cmp(bound) {
+                            std::cmp::Ordering::Equal => {
+                                node = (*node).child[Side::Right];
+                            }
+                            std::cmp::Ordering::Less => {
+                                node = (*node).child[Side::Right];
+                            }
+                            std::cmp::Ordering::Greater => {
+                                ans = node;
+                                node = (*node).child[Side::Left];
+                            }
+                        }
+                    }
+                    node = ans;
+                }
+            }
+        }
+        node
+    }
+
+    fn find_tail<T>(&self, bound: Bound<&T>) -> *mut TreeNode<K, V>
+    where
+        T: Ord + ?Sized,
+        K: Borrow<T>,
+    {
+        let mut node = self.root;
+        if node.is_null() {
+            return node;
+        }
+        unsafe {
+            match bound {
+                Bound::Unbounded => {
+                    while !(*node).child[Side::Right].is_null() {
+                        node = (*node).child[Side::Right];
+                    }
+                }
+                Bound::Included(bound) => {
+                    let mut ans = ptr::null_mut();
+                    while !node.is_null() {
+                        match (*node).key.borrow().cmp(bound) {
+                            std::cmp::Ordering::Equal => {
+                                ans = node;
+                                node = (*node).child[Side::Right];
+                            }
+                            std::cmp::Ordering::Less => {
+                                ans = node;
+                                node = (*node).child[Side::Right];
+                            }
+                            std::cmp::Ordering::Greater => {
+                                node = (*node).child[Side::Left];
+                            }
+                        }
+                    }
+                    node = ans;
+                }
+                Bound::Excluded(bound) => {
+                    let mut ans = ptr::null_mut();
+                    while !node.is_null() {
+                        match (*node).key.borrow().cmp(bound) {
+                            std::cmp::Ordering::Equal => {
+                                node = (*node).child[Side::Left];
+                            }
+                            std::cmp::Ordering::Less => {
+                                ans = node;
+                                node = (*node).child[Side::Right];
+                            }
+                            std::cmp::Ordering::Greater => {
+                                node = (*node).child[Side::Left];
+                            }
+                        }
+                    }
+                    node = ans;
+                }
+            }
+        }
+        node
     }
 }
 
@@ -534,10 +653,10 @@ where
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.head.is_null() {
-            None
-        } else {
-            unsafe {
+        unsafe {
+            if self.head.is_null() || (*self.head).prev == self.tail {
+                None
+            } else {
                 let ret = Some((&(*self.head).key, &(*self.head).val));
                 self.head = (*self.head).next;
                 ret
@@ -551,10 +670,10 @@ where
     K: PartialEq + Eq + PartialOrd + Ord,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        if self.tail.is_null() {
-            None
-        } else {
-            unsafe {
+        unsafe {
+            if self.tail.is_null() || (*self.tail).next == self.head {
+                None
+            } else {
                 let ret = Some((&(*self.tail).key, &(*self.tail).val));
                 self.tail = (*self.tail).prev;
                 ret
@@ -562,6 +681,7 @@ where
         }
     }
 }
+
 pub struct RedBlackTreeIterMut<'a, K, V>
 where
     K: PartialEq + Eq + PartialOrd + Ord,
@@ -578,10 +698,10 @@ where
     type Item = (&'a K, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.head.is_null() {
-            None
-        } else {
-            unsafe {
+        unsafe {
+            if self.head.is_null() || (*self.head).prev == self.tail {
+                None
+            } else {
                 let ret = Some((&(*self.head).key, &mut (*self.head).val));
                 self.head = (*self.head).next;
                 ret
@@ -595,10 +715,10 @@ where
     K: PartialEq + Eq + PartialOrd + Ord,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        if self.tail.is_null() {
-            None
-        } else {
-            unsafe {
+        unsafe {
+            if self.tail.is_null() || (*self.tail).next == self.head {
+                None
+            } else {
                 let ret = Some((&(*self.tail).key, &mut (*self.tail).val));
                 self.tail = (*self.tail).prev;
                 ret
@@ -696,22 +816,8 @@ where
     type IntoIter = RedBlackTreeIntoIter<K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let mut head = self.root;
-        if !head.is_null() {
-            unsafe {
-                while !(*head).child[Side::Left].is_null() {
-                    head = (*head).child[Side::Left];
-                }
-            }
-        }
-        let mut tail = self.root;
-        if !tail.is_null() {
-            unsafe {
-                while !(*tail).child[Side::Right].is_null() {
-                    tail = (*tail).child[Side::Right];
-                }
-            }
-        }
+        let head = self.find_head(Bound::Unbounded);
+        let tail = self.find_tail(Bound::Unbounded);
         RedBlackTreeIntoIter {
             head,
             tail,

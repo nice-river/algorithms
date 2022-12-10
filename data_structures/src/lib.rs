@@ -134,8 +134,16 @@ mod tests {
                 assert_eq!(x, y);
                 drop(x);
                 drop(y);
-                let x = stdtree.into_iter().rev().take(n as usize / 2).collect::<Vec<_>>();
-                let y = rbtree.into_iter().rev().take(n as usize / 2).collect::<Vec<_>>();
+                let x = stdtree
+                    .into_iter()
+                    .rev()
+                    .take(n as usize / 2)
+                    .collect::<Vec<_>>();
+                let y = rbtree
+                    .into_iter()
+                    .rev()
+                    .take(n as usize / 2)
+                    .collect::<Vec<_>>();
                 assert_eq!(x, y);
             }
         }
@@ -165,6 +173,97 @@ mod tests {
                 let y = rbtree.iter_mut().rev().collect::<Vec<_>>();
                 // let z = rbtree.iter_mut().rev().collect::<Vec<_>>(); // this line should fail compile
                 assert_eq!(x, y);
+            }
+        }
+
+        #[test]
+        fn test_range() {
+            let n = 10000;
+            let test_case = 10;
+            for _ in 0..test_case {
+                let mut stdtree = BTreeMap::new();
+                let mut rbtree = RedBlackTree::new();
+                let mut mini = i32::MAX;
+                let mut maxi = i32::MIN;
+                for _ in 0..n * 5 {
+                    let mut rng = rand::thread_rng();
+                    let x = rng.gen::<i32>() % n - n / 2;
+                    let y = rng.gen::<i32>() % n;
+                    mini = mini.min(x);
+                    maxi = maxi.max(x);
+                    assert_eq!(stdtree.insert(x, y), rbtree.insert(x, y));
+                }
+                assert_eq!(stdtree.len(), rbtree.len());
+
+                for _ in 0..100 {
+                    let mut rng = rand::thread_rng();
+                    let start = rng.gen_range(mini..maxi);
+                    let end = rng.gen_range(start..=maxi);
+                    if rng.gen::<bool>() {
+                        let bound = start..=end;
+                        let x = stdtree.range(bound.clone()).collect::<Vec<_>>();
+                        let y = rbtree.range(bound).collect::<Vec<_>>();
+                        assert_eq!(x, y);
+                    } else {
+                        let bound = start..end;
+                        let x = stdtree.range(bound.clone()).collect::<Vec<_>>();
+                        let y = rbtree.range(bound).collect::<Vec<_>>();
+                        assert_eq!(x, y);
+                    };
+                }
+            }
+        }
+
+        #[test]
+        fn test_range_mut() {
+            let n = 10000;
+            let test_case = 10;
+            for _ in 0..test_case {
+                let mut stdtree = BTreeMap::new();
+                let mut rbtree = RedBlackTree::new();
+                let mut mini = i32::MAX;
+                let mut maxi = i32::MIN;
+                for _ in 0..n * 5 {
+                    let mut rng = rand::thread_rng();
+                    let x = rng.gen::<i32>() % n - n / 2;
+                    let y = rng.gen::<i32>() % n;
+                    mini = mini.min(x);
+                    maxi = maxi.max(x);
+                    assert_eq!(stdtree.insert(x, y), rbtree.insert(x, y));
+                }
+                assert_eq!(stdtree.len(), rbtree.len());
+
+                for _ in 0..100 {
+                    let mut rng = rand::thread_rng();
+                    let start = rng.gen_range(mini..maxi);
+                    let end = rng.gen_range(start..=maxi);
+                    if rng.gen::<bool>() {
+                        let bound = start..=end;
+                        stdtree
+                            .range_mut(bound.clone())
+                            .for_each(|(k, v)| *v = *v * 2 + *k);
+
+                        rbtree
+                            .range_mut(bound.clone())
+                            .for_each(|(k, v)| *v = *v * 2 + *k);
+                        assert_eq!(
+                            stdtree.range_mut(..).collect::<Vec<_>>(),
+                            rbtree.range_mut(..).collect::<Vec<_>>(),
+                        );
+                    } else {
+                        let bound = start..end;
+                        stdtree
+                            .range_mut(bound.clone())
+                            .for_each(|(k, v)| *v = *v * 2 + *k);
+                        rbtree
+                            .range_mut(bound.clone())
+                            .for_each(|(k, v)| *v = *v * 2 + *k);
+                        assert_eq!(
+                            stdtree.range_mut(..).collect::<Vec<_>>(),
+                            rbtree.range_mut(..).collect::<Vec<_>>(),
+                        );
+                    };
+                }
             }
         }
     }
