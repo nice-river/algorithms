@@ -1,3 +1,4 @@
+/// red black tree implementation based on [wikipedia](https://en.wikipedia.org/wiki/Red%E2%80%93black_tree)
 use std::{
     borrow::Borrow,
     fmt::{Debug, Display},
@@ -78,9 +79,9 @@ where
     color: Color,
     parent: *mut TreeNode<K, V>,
     child: [*mut TreeNode<K, V>; 2],
-    subtree_sz: [usize; 2],
-    next: *mut TreeNode<K, V>,
-    prev: *mut TreeNode<K, V>,
+    subtree_sz: [usize; 2], // size of subtrees, used to find the kth_smallest elment
+    next: *mut TreeNode<K, V>, // the next treenode whick key is greater
+    prev: *mut TreeNode<K, V>, // the prev threenode whick key is lesser
 }
 
 impl<K, V> TreeNode<K, V>
@@ -196,6 +197,7 @@ where
                 let node_key = &(*node).key;
                 if node_key == &key {
                     while !parent.is_null() {
+                        // don't need to add new node, rollback the subtree_sz
                         if &(*parent).key > &key {
                             (*parent).subtree_sz[Side::Left] -= 1;
                         } else {
@@ -219,13 +221,14 @@ where
             }
         }
         self.size += 1;
-        let boxed_node = Box::new(TreeNode::new(key, val));
-        node = Box::leak(boxed_node) as *mut _;
-        if parent.is_null() {
-            self.root = node;
-            return None;
-        }
         unsafe {
+            // add new node, update next and prev pointer
+            let boxed_node = Box::new(TreeNode::new(key, val));
+            node = Box::leak(boxed_node) as *mut _;
+            if parent.is_null() {
+                self.root = node;
+                return None;
+            }
             (*node).color = Color::Red;
             (*node).parent = parent;
             (*parent).child[side] = node;
@@ -254,36 +257,43 @@ where
     }
 
     fn insert_helper(&mut self, mut node: *mut TreeNode<K, V>, mut parent: *mut TreeNode<K, V>) {
+        // the wikipedia insertion cases
         unsafe {
             loop {
                 if (*parent).color.is_black() {
+                    // Case I1
                     return;
                 }
                 // from now on parent.color is Red
                 let grandparent = (*parent).parent;
                 if grandparent.is_null() {
+                    // Case I4
                     (*parent).color = Color::Black;
                     return;
                 }
                 let parent_side = (*parent).get_side(grandparent);
                 let uncle = (*grandparent).child[parent_side.flip()];
                 if uncle.is_null() || (*uncle).color.is_black() {
+                    // Case I5
                     let node_side = (*node).get_side(parent);
                     if node_side != parent_side {
                         self.rotate(parent, parent_side);
                         parent = (*grandparent).child[parent_side];
                     }
+                    // Case I6
                     self.rotate(grandparent, parent_side.flip());
                     (*parent).color = Color::Black;
                     (*grandparent).color = Color::Red;
                     return;
                 }
+                // Case I2
                 (*parent).color = Color::Black;
                 (*uncle).color = Color::Black;
                 (*grandparent).color = Color::Red;
                 node = grandparent;
                 parent = (*node).parent;
                 if parent.is_null() {
+                    // Case I3
                     break;
                 }
             }
@@ -315,6 +325,7 @@ where
         if node.is_null() {
             unsafe {
                 while !parent.is_null() {
+                    // can't find the node, rollback the subtree_sz
                     if &(*parent).key > &key {
                         (*parent).subtree_sz[Side::Left] += 1;
                     } else {
@@ -330,19 +341,27 @@ where
         unsafe {
             loop {
                 if (*node).child[0].is_null() && (*node).child[1].is_null() {
+                    // do not have any children
                     if self.root == node {
+                        // the node is the root, just delete it
                         self.root = ptr::null_mut();
                         return Some(Self::free_node(node));
                     } else if (*node).color.is_red() {
+                        // color is red, delete it would not break the rule
                         (*parent).child[side] = ptr::null_mut();
                         return Some(Self::free_node(node));
                     } else {
+                        // node's color is balck and do not have any children
+                        // this branch is the complicated case
                         let v = Some(Self::free_node(node));
                         (*parent).child[side] = ptr::null_mut();
                         self.remove_helper(parent, side);
                         return v;
                     }
                 } else if !(*node).child[0].is_null() && !(*node).child[1].is_null() {
+                    // have 2 children
+                    // swap this node and the biggest node that smaller than this node(i.e. node.prev, and node.prev must exist, since the left child is not null),
+                    // the node will be removed in next iteration
                     (*node).subtree_sz[0] -= 1;
                     let mut biggest_less = (*node).child[0];
                     while !(*biggest_less).child[1].is_null() {
@@ -353,8 +372,12 @@ where
                     std::mem::swap(&mut (*node).val, &mut (*biggest_less).val);
                     parent = (*biggest_less).parent;
                     side = (*biggest_less).get_side(parent);
+                    // in the next iteration, the node will be deleted in other branches
                     node = biggest_less;
                 } else if !(*node).child[0].is_null() {
+                    // if it has only one child, the child must be red color, otherwise it will violate requirement 4
+                    // then this node must be red color, otherwise it will violate requirement 3
+                    // so just simply remove this node, and make the child black is good enough
                     if !parent.is_null() {
                         (*parent).child[side] = (*node).child[0];
                     }
@@ -365,6 +388,7 @@ where
                     }
                     return Some(Self::free_node(node));
                 } else {
+                    // the same as above branch
                     if !parent.is_null() {
                         (*parent).child[side] = (*node).child[1];
                     }
@@ -380,12 +404,14 @@ where
     }
 
     fn remove_helper(&mut self, mut parent: *mut TreeNode<K, V>, mut side: Side) {
+        // the complicated wikipedia remove cases
         unsafe {
             let mut sibling = (*parent).child[side.flip()];
             let mut distant_nephew = (*sibling).child[side.flip()];
             let mut close_nephew = (*sibling).child[side];
             loop {
                 if (*sibling).color.is_red() {
+                    // Case D3
                     self.rotate(parent, side);
                     (*parent).color = Color::Red;
                     (*sibling).color = Color::Black;
@@ -393,31 +419,37 @@ where
                     distant_nephew = (*sibling).child[side.flip()];
                     close_nephew = (*sibling).child[side];
                 } else if !distant_nephew.is_null() && (*distant_nephew).color.is_red() {
+                    // Case D6
                     self.rotate(parent, side);
                     (*sibling).color = (*parent).color;
                     (*parent).color = Color::Black;
                     (*distant_nephew).color = Color::Black;
                     return;
                 } else if !close_nephew.is_null() && (*close_nephew).color.is_red() {
+                    // Case D5
                     self.rotate(sibling, side.flip());
                     (*sibling).color = Color::Red;
                     (*close_nephew).color = Color::Black;
                     distant_nephew = sibling;
                     sibling = close_nephew;
+                    // Case D6
                     self.rotate(parent, side);
                     (*sibling).color = (*parent).color;
                     (*parent).color = Color::Black;
                     (*distant_nephew).color = Color::Black;
                     return;
                 } else if (*parent).color.is_red() {
+                    // Case D4
                     (*sibling).color = Color::Red;
                     (*parent).color = Color::Black;
                     return;
                 } else {
                     (*sibling).color = Color::Red;
                     if (*parent).parent.is_null() {
+                        // Case D2
                         break;
                     }
+                    // Case D1
                     side = (*parent).get_side((*parent).parent);
                     parent = (*parent).parent;
                     sibling = (*parent).child[side.flip()];
@@ -429,6 +461,7 @@ where
     }
 
     fn free_node(node: *mut TreeNode<K, V>) -> V {
+        // free memory and update next, prev pointer
         unsafe {
             let prev = (*node).prev;
             let next = (*node).next;
@@ -444,6 +477,7 @@ where
     }
 
     fn rotate(&mut self, node: *mut TreeNode<K, V>, side: Side) -> *mut TreeNode<K, V> {
+        // wikipedia, RoateDirRoot function
         unsafe {
             let parent = (*node).parent;
             let flip_child = (*node).child[side.flip()];
@@ -525,6 +559,7 @@ where
         T: Ord + ?Sized,
         K: Borrow<T>,
     {
+        // find the first node's key >= bound(based on the bound enum)
         let mut node = self.root;
         if node.is_null() {
             return node;
@@ -583,6 +618,7 @@ where
         T: Ord + ?Sized,
         K: Borrow<T>,
     {
+        // find the last node's key <= bound(based on the bound enum)
         let mut node = self.root;
         if node.is_null() {
             return node;
@@ -832,6 +868,7 @@ where
 {
     fn drop(&mut self) {
         while !self.head.is_null() {
+            // free the rest nodes memory
             unsafe {
                 let boxed_node = Box::from_raw(self.head);
                 self.head = boxed_node.next;
@@ -842,6 +879,7 @@ where
     }
 }
 
+// used for debug
 impl<K, V> RedBlackTree<K, V>
 where
     K: PartialEq + Eq + PartialOrd + Ord + Copy + Debug + Display,
