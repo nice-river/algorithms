@@ -5,13 +5,13 @@ pub mod rbtree;
 #[cfg(test)]
 mod tests {
     mod rbtree {
-        use crate::rbtree::RedBlackTree;
+        use crate::rbtree::{RBTreeMap, RBTreeSet};
         use rand::{seq::SliceRandom, Rng};
-        use std::collections::BTreeMap;
+        use std::collections::{BTreeMap, BTreeSet};
 
         #[test]
         fn test_insert() {
-            let mut tree = crate::rbtree::RedBlackTree::new();
+            let mut tree = crate::rbtree::RBTreeMap::new();
             let n = 100000;
             let mut arr = (1..=n).collect::<Vec<usize>>();
             arr.shuffle(&mut rand::thread_rng());
@@ -31,7 +31,7 @@ mod tests {
 
         #[test]
         fn test_remove() {
-            let mut tree = crate::rbtree::RedBlackTree::new();
+            let mut tree = crate::rbtree::RBTreeMap::new();
             let n = 100000;
             let mut arr = (1..=n).collect::<Vec<usize>>();
             arr.shuffle(&mut rand::thread_rng());
@@ -55,7 +55,7 @@ mod tests {
             let test_case = 10;
             for _ in 0..test_case {
                 let mut stdtree = BTreeMap::new();
-                let mut rbtree = RedBlackTree::new();
+                let mut rbtree = RBTreeMap::new();
                 for _ in 0..n * 5 {
                     let mut rng = rand::thread_rng();
                     let x = rng.gen::<i32>() % n - n / 2;
@@ -86,7 +86,7 @@ mod tests {
             let test_case = 10;
             for _ in 0..test_case {
                 let mut stdtree = BTreeMap::new();
-                let mut rbtree = RedBlackTree::new();
+                let mut rbtree = RBTreeMap::new();
                 for _ in 0..n * 5 {
                     let mut rng = rand::thread_rng();
                     let x = rng.gen::<i32>() % n - n / 2;
@@ -116,7 +116,7 @@ mod tests {
             let test_case = 10;
             for _ in 0..test_case {
                 let mut stdtree = BTreeMap::new();
-                let mut rbtree = RedBlackTree::new();
+                let mut rbtree = RBTreeMap::new();
                 for _ in 0..n * 5 {
                     let mut rng = rand::thread_rng();
                     let x = rng.gen::<i32>() % n - n / 2;
@@ -154,7 +154,7 @@ mod tests {
             let test_case = 10;
             for _ in 0..test_case {
                 let mut stdtree = BTreeMap::new();
-                let mut rbtree = RedBlackTree::new();
+                let mut rbtree = RBTreeMap::new();
                 for _ in 0..n * 5 {
                     let mut rng = rand::thread_rng();
                     let x = rng.gen::<i32>() % n - n / 2;
@@ -182,7 +182,7 @@ mod tests {
             let test_case = 10;
             for _ in 0..test_case {
                 let mut stdtree = BTreeMap::new();
-                let mut rbtree = RedBlackTree::new();
+                let mut rbtree = RBTreeMap::new();
                 let mut mini = i32::MAX;
                 let mut maxi = i32::MIN;
                 for _ in 0..n * 5 {
@@ -220,7 +220,7 @@ mod tests {
             let test_case = 10;
             for _ in 0..test_case {
                 let mut stdtree = BTreeMap::new();
-                let mut rbtree = RedBlackTree::new();
+                let mut rbtree = RBTreeMap::new();
                 let mut mini = i32::MAX;
                 let mut maxi = i32::MIN;
                 for _ in 0..n * 5 {
@@ -264,6 +264,61 @@ mod tests {
                         );
                     };
                 }
+            }
+        }
+
+        #[test]
+        fn test_query_str() {
+            let mut tree = RBTreeMap::new();
+            tree.insert("hello".to_owned(), 1);
+            assert_eq!(tree.get("hello"), Some(&1));
+        }
+
+        #[test]
+        fn test_set() {
+            let n = 10000;
+            let test_case = 10;
+            for _ in 0..test_case {
+                let mut stdtree = BTreeSet::new();
+                let mut rbtree = RBTreeSet::new();
+                let mut mini = i32::MAX;
+                let mut maxi = i32::MIN;
+                for _ in 0..n * 5 {
+                    let mut rng = rand::thread_rng();
+                    let x = rng.gen::<i32>() % n - n / 2;
+                    mini = mini.min(x);
+                    maxi = maxi.max(x);
+                    assert_eq!(stdtree.insert(x), rbtree.insert(x));
+                }
+                assert_eq!(stdtree.len(), rbtree.len());
+
+                for _ in 0..100 {
+                    let mut rng = rand::thread_rng();
+                    let start = rng.gen_range(mini..maxi);
+                    let end = rng.gen_range(start..=maxi);
+                    if rng.gen::<bool>() {
+                        let bound = start..=end;
+                        let x = stdtree.range(bound.clone()).collect::<Vec<_>>();
+                        let y = rbtree.range(bound).collect::<Vec<_>>();
+                        assert_eq!(x, y);
+                    } else {
+                        let bound = start..end;
+                        let x = stdtree.range(bound.clone()).collect::<Vec<_>>();
+                        let y = rbtree.range(bound).collect::<Vec<_>>();
+                        assert_eq!(x, y);
+                    };
+                }
+                let x = stdtree
+                    .into_iter()
+                    .rev()
+                    .take(n as usize / 2)
+                    .collect::<Vec<_>>();
+                let y = rbtree
+                    .into_iter()
+                    .rev()
+                    .take(n as usize / 2)
+                    .collect::<Vec<_>>();
+                assert_eq!(x, y);
             }
         }
     }

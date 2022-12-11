@@ -2,7 +2,7 @@ use data_structures::rbtree;
 use rand::seq::SliceRandom;
 
 fn main() {
-    let mut tree = rbtree::RedBlackTree::new();
+    let mut tree = rbtree::RBTreeMap::new();
     // let mut tree = BTreeMap::new();
     let n = 10000000;
     let mut arr = (1..=n).collect::<Vec<i32>>();

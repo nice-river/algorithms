@@ -72,7 +72,7 @@ impl Display for Color {
 
 struct TreeNode<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     key: K,
     val: V,
@@ -86,7 +86,7 @@ where
 
 impl<K, V> TreeNode<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     fn new(key: K, val: V) -> Self {
         Self {
@@ -110,17 +110,17 @@ where
     }
 }
 
-pub struct RedBlackTree<K, V>
+pub struct RBTreeMap<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     root: *mut TreeNode<K, V>,
     size: usize,
 }
 
-impl<K, V> RedBlackTree<K, V>
+impl<K, V> RBTreeMap<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     pub fn new() -> Self {
         Self {
@@ -134,14 +134,27 @@ where
         self.size
     }
 
-    pub fn get(&self, key: &K) -> Option<&V> {
+    #[inline]
+    pub fn contains_key<Q>(&self, key: &Q) -> bool
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized,
+    {
+        self.get(key).is_some()
+    }
+
+    pub fn get<Q>(&self, key: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized,
+    {
         let mut node = self.root;
         unsafe {
             while !node.is_null() {
                 let node_key = &(*node).key;
-                if node_key == key {
+                if node_key.borrow() == key {
                     return Some(&(*node).val);
-                } else if node_key < &key {
+                } else if node_key.borrow() < key {
                     node = (*node).child[Side::Right];
                 } else {
                     node = (*node).child[Side::Left];
@@ -151,14 +164,18 @@ where
         None
     }
 
-    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+    pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized,
+    {
         let mut node = self.root;
         unsafe {
             while !node.is_null() {
                 let node_key = &(*node).key;
-                if node_key == key {
+                if node_key.borrow() == key {
                     return Some(&mut (*node).val);
-                } else if node_key < &key {
+                } else if node_key.borrow() < key {
                     node = (*node).child[Side::Right];
                 } else {
                     node = (*node).child[Side::Left];
@@ -300,16 +317,20 @@ where
         }
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<V> {
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized,
+    {
         let mut parent = ptr::null_mut();
         let mut node = self.root;
         let mut side = Side::Left;
         unsafe {
             while !node.is_null() {
                 let node_key = &(*node).key;
-                if node_key == key {
+                if node_key.borrow() == key {
                     break;
-                } else if node_key < &key {
+                } else if node_key.borrow() < key {
                     (*node).subtree_sz[Side::Right] -= 1;
                     parent = node;
                     side = Side::Right;
@@ -326,7 +347,7 @@ where
             unsafe {
                 while !parent.is_null() {
                     // can't find the node, rollback the subtree_sz
-                    if &(*parent).key > &key {
+                    if (*parent).key.borrow() > key {
                         (*parent).subtree_sz[Side::Left] += 1;
                     } else {
                         (*parent).subtree_sz[Side::Right] += 1;
@@ -504,60 +525,60 @@ where
         }
     }
 
-    pub fn iter(&self) -> RedBlackTreeIter<K, V> {
+    pub fn iter(&self) -> RBTreeMapIter<K, V> {
         let head = self.find_head(Bound::Unbounded);
         let tail = self.find_tail(Bound::Unbounded);
-        RedBlackTreeIter {
+        RBTreeMapIter {
             head,
             tail,
             _phantom: PhantomData,
         }
     }
 
-    pub fn iter_mut(&mut self) -> RedBlackTreeIterMut<K, V> {
+    pub fn iter_mut(&mut self) -> RBTreeMapIterMut<K, V> {
         let head = self.find_head(Bound::Unbounded);
         let tail = self.find_tail(Bound::Unbounded);
-        RedBlackTreeIterMut {
+        RBTreeMapIterMut {
             head,
             tail,
             _tree: self,
         }
     }
 
-    pub fn range<T, R>(&self, range: R) -> RedBlackTreeIter<K, V>
+    pub fn range<Q, R>(&self, range: R) -> RBTreeMapIter<K, V>
     where
-        T: Ord + ?Sized,
-        K: Borrow<T> + Debug,
-        R: RangeBounds<T>,
+        Q: Ord + ?Sized,
+        K: Borrow<Q>,
+        R: RangeBounds<Q>,
     {
         let head = self.find_head(range.start_bound());
         let tail = self.find_tail(range.end_bound());
-        RedBlackTreeIter {
+        RBTreeMapIter {
             head,
             tail,
             _phantom: PhantomData,
         }
     }
 
-    pub fn range_mut<T, R>(&mut self, range: R) -> RedBlackTreeIterMut<K, V>
+    pub fn range_mut<Q, R>(&mut self, range: R) -> RBTreeMapIterMut<K, V>
     where
-        T: Ord + ?Sized,
-        K: Borrow<T>,
-        R: RangeBounds<T>,
+        Q: Ord + ?Sized,
+        K: Borrow<Q>,
+        R: RangeBounds<Q>,
     {
         let head = self.find_head(range.start_bound());
         let tail = self.find_tail(range.end_bound());
-        RedBlackTreeIterMut {
+        RBTreeMapIterMut {
             head,
             tail,
             _tree: self,
         }
     }
 
-    fn find_head<T>(&self, bound: Bound<&T>) -> *mut TreeNode<K, V>
+    fn find_head<Q>(&self, bound: Bound<&Q>) -> *mut TreeNode<K, V>
     where
-        T: Ord + ?Sized,
-        K: Borrow<T>,
+        Q: Ord + ?Sized,
+        K: Borrow<Q>,
     {
         // find the first node's key >= bound(based on the bound enum)
         let mut node = self.root;
@@ -613,10 +634,10 @@ where
         node
     }
 
-    fn find_tail<T>(&self, bound: Bound<&T>) -> *mut TreeNode<K, V>
+    fn find_tail<Q>(&self, bound: Bound<&Q>) -> *mut TreeNode<K, V>
     where
-        T: Ord + ?Sized,
-        K: Borrow<T>,
+        Q: Ord + ?Sized,
+        K: Borrow<Q>,
     {
         // find the last node's key <= bound(based on the bound enum)
         let mut node = self.root;
@@ -673,18 +694,18 @@ where
     }
 }
 
-pub struct RedBlackTreeIter<'a, K, V>
+pub struct RBTreeMapIter<'a, K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     head: *mut TreeNode<K, V>,
     tail: *mut TreeNode<K, V>,
-    _phantom: PhantomData<&'a RedBlackTree<K, V>>,
+    _phantom: PhantomData<&'a RBTreeMap<K, V>>,
 }
 
-impl<'a, K, V> Iterator for RedBlackTreeIter<'a, K, V>
+impl<'a, K, V> Iterator for RBTreeMapIter<'a, K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     type Item = (&'a K, &'a V);
 
@@ -701,9 +722,9 @@ where
     }
 }
 
-impl<'a, K, V> DoubleEndedIterator for RedBlackTreeIter<'a, K, V>
+impl<'a, K, V> DoubleEndedIterator for RBTreeMapIter<'a, K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         unsafe {
@@ -718,18 +739,18 @@ where
     }
 }
 
-pub struct RedBlackTreeIterMut<'a, K, V>
+pub struct RBTreeMapIterMut<'a, K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     head: *mut TreeNode<K, V>,
     tail: *mut TreeNode<K, V>,
-    _tree: &'a mut RedBlackTree<K, V>,
+    _tree: &'a mut RBTreeMap<K, V>,
 }
 
-impl<'a, K, V> Iterator for RedBlackTreeIterMut<'a, K, V>
+impl<'a, K, V> Iterator for RBTreeMapIterMut<'a, K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     type Item = (&'a K, &'a mut V);
 
@@ -746,9 +767,9 @@ where
     }
 }
 
-impl<'a, K, V> DoubleEndedIterator for RedBlackTreeIterMut<'a, K, V>
+impl<'a, K, V> DoubleEndedIterator for RBTreeMapIterMut<'a, K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         unsafe {
@@ -763,9 +784,9 @@ where
     }
 }
 
-impl<K, V> Drop for RedBlackTree<K, V>
+impl<K, V> Drop for RBTreeMap<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     fn drop(&mut self) {
         if self.root.is_null() {
@@ -787,18 +808,18 @@ where
     }
 }
 
-pub struct RedBlackTreeIntoIter<K, V>
+pub struct RBTreeMapIntoIter<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     head: *mut TreeNode<K, V>,
     tail: *mut TreeNode<K, V>,
-    tree: RedBlackTree<K, V>,
+    tree: RBTreeMap<K, V>,
 }
 
-impl<K, V> Iterator for RedBlackTreeIntoIter<K, V>
+impl<K, V> Iterator for RBTreeMapIntoIter<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     type Item = (K, V);
 
@@ -821,9 +842,9 @@ where
     }
 }
 
-impl<K, V> DoubleEndedIterator for RedBlackTreeIntoIter<K, V>
+impl<K, V> DoubleEndedIterator for RBTreeMapIntoIter<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.tail.is_null() {
@@ -844,17 +865,17 @@ where
     }
 }
 
-impl<K, V> IntoIterator for RedBlackTree<K, V>
+impl<K, V> IntoIterator for RBTreeMap<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     type Item = (K, V);
-    type IntoIter = RedBlackTreeIntoIter<K, V>;
+    type IntoIter = RBTreeMapIntoIter<K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
         let head = self.find_head(Bound::Unbounded);
         let tail = self.find_tail(Bound::Unbounded);
-        RedBlackTreeIntoIter {
+        RBTreeMapIntoIter {
             head,
             tail,
             tree: self,
@@ -862,9 +883,9 @@ where
     }
 }
 
-impl<K, V> Drop for RedBlackTreeIntoIter<K, V>
+impl<K, V> Drop for RBTreeMapIntoIter<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord,
+    K: Ord,
 {
     fn drop(&mut self) {
         while !self.head.is_null() {
@@ -880,9 +901,9 @@ where
 }
 
 // used for debug
-impl<K, V> RedBlackTree<K, V>
+impl<K, V> RBTreeMap<K, V>
 where
-    K: PartialEq + Eq + PartialOrd + Ord + Copy + Debug + Display,
+    K: Ord + Copy + Debug + Display,
 {
     pub fn bfs(&self) -> Vec<Vec<String>> {
         use std::collections::VecDeque;
@@ -937,6 +958,135 @@ where
             Self::dfs((*node).child[0], res);
             res.push((*node).key);
             Self::dfs((*node).child[1], res);
+        }
+    }
+}
+
+pub struct RBTreeSet<K>
+where
+    K: Ord,
+{
+    map: RBTreeMap<K, ()>,
+}
+
+impl<K> RBTreeSet<K>
+where
+    K: Ord,
+{
+    pub fn new() -> Self {
+        Self {
+            map: RBTreeMap::new(),
+        }
+    }
+
+    #[inline]
+    pub fn contains<Q>(&self, key: &Q) -> bool
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized,
+    {
+        self.map.contains_key(key)
+    }
+
+    pub fn insert(&mut self, key: K) -> bool {
+        self.map.insert(key, ()).is_none()
+    }
+
+    pub fn remove<Q>(&mut self, key: &Q) -> bool
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized,
+    {
+        self.map.remove(key).is_some()
+    }
+
+    pub fn iter(&self) -> RBTreeSetIter<K> {
+        RBTreeSetIter {
+            map_iter: self.map.iter(),
+        }
+    }
+
+    pub fn range<Q, R>(&self, range: R) -> RBTreeSetIter<K>
+    where
+        Q: Ord + ?Sized,
+        K: Borrow<Q>,
+        R: RangeBounds<Q>,
+    {
+        RBTreeSetIter {
+            map_iter: self.map.range(range),
+        }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+}
+
+pub struct RBTreeSetIter<'a, K>
+where
+    K: Ord,
+{
+    map_iter: RBTreeMapIter<'a, K, ()>,
+}
+
+impl<'a, K> Iterator for RBTreeSetIter<'a, K>
+where
+    K: Ord,
+{
+    type Item = &'a K;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.map_iter.next().map(|(k, _)| k)
+    }
+}
+
+impl<'a, K> DoubleEndedIterator for RBTreeSetIter<'a, K>
+where
+    K: Ord,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.map_iter.next_back().map(|(k, _)| k)
+    }
+}
+
+pub struct RBTreeSetIntoIter<K>
+where
+    K: Ord,
+{
+    map_into_iter: RBTreeMapIntoIter<K, ()>,
+}
+
+impl<K> Iterator for RBTreeSetIntoIter<K>
+where
+    K: Ord,
+{
+    type Item = K;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.map_into_iter.next().map(|(k, _)| k)
+    }
+}
+
+impl<K> DoubleEndedIterator for RBTreeSetIntoIter<K>
+where
+    K: Ord,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.map_into_iter.next_back().map(|(k, _)| k)
+    }
+}
+
+impl<K> IntoIterator for RBTreeSet<K>
+where
+    K: Ord,
+{
+    type Item = K;
+    type IntoIter = RBTreeSetIntoIter<K>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RBTreeSetIntoIter {
+            map_into_iter: self.map.into_iter(),
         }
     }
 }
