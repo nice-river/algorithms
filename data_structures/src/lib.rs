@@ -321,5 +321,43 @@ mod tests {
                 assert_eq!(x, y);
             }
         }
+
+        #[test]
+        fn test_set_union() {
+            let n = 10000;
+            let test_case = 10;
+            for _ in 0..test_case {
+                let mut stdtree0 = BTreeSet::new();
+                let mut rbtree0 = RBTreeSet::new();
+                let mut stdtree1 = BTreeSet::new();
+                let mut rbtree1 = RBTreeSet::new();
+                let mut mini = i32::MAX;
+                let mut maxi = i32::MIN;
+                for _ in 0..n * 5 {
+                    let mut rng = rand::thread_rng();
+                    let x = rng.gen::<i32>() % n - n / 2;
+                    mini = mini.min(x);
+                    maxi = maxi.max(x);
+                    assert_eq!(stdtree0.insert(x), rbtree0.insert(x));
+                }
+                for _ in 0..n * 5 {
+                    let mut rng = rand::thread_rng();
+                    let x = rng.gen::<i32>() % n - n / 2;
+                    mini = mini.min(x);
+                    maxi = maxi.max(x);
+                    assert_eq!(stdtree1.insert(x), rbtree1.insert(x));
+                }
+                assert_eq!(stdtree0.len(), rbtree0.len());
+                assert_eq!(stdtree1.len(), rbtree1.len());
+
+                for _ in 0..100 {
+                    let mut rng = rand::thread_rng();
+                    let take = rng.gen_range(1..=stdtree0.len());
+                    let x = stdtree0.union(&stdtree1).take(take).collect::<Vec<_>>();
+                    let y = rbtree0.union(&rbtree1).take(take).collect::<Vec<_>>();
+                    assert_eq!(x, y);
+                }
+            }
+        }
     }
 }

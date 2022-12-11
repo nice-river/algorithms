@@ -1021,6 +1021,12 @@ where
     pub fn len(&self) -> usize {
         self.map.len()
     }
+
+    pub fn union<'a>(&'a self, other: &'a RBTreeSet<K>) -> RBTreeSetUnion<'a, K> {
+        RBTreeSetUnion::new(self.iter(), other.iter())
+    }
+
+    // TODO implement difference(), symmetrice_difference(), insertsection()
 }
 
 pub struct RBTreeSetIter<'a, K>
@@ -1087,6 +1093,104 @@ where
     fn into_iter(self) -> Self::IntoIter {
         RBTreeSetIntoIter {
             map_into_iter: self.map.into_iter(),
+        }
+    }
+}
+
+pub struct RBTreeSetUnion<'a, K>
+where
+    K: Ord,
+{
+    iters: [RBTreeSetIter<'a, K>; 2],
+    head_vals: [Option<&'a K>; 2],
+    tail_vals: [Option<&'a K>; 2],
+}
+
+impl<'a, K> RBTreeSetUnion<'a, K>
+where
+    K: Ord,
+{
+    fn new(iter_a: RBTreeSetIter<'a, K>, iter_b: RBTreeSetIter<'a, K>) -> Self {
+        Self {
+            iters: [iter_a, iter_b],
+            head_vals: [None, None],
+            tail_vals: [None, None],
+        }
+    }
+}
+
+impl<'a, K> Iterator for RBTreeSetUnion<'a, K>
+where
+    K: Ord,
+{
+    type Item = &'a K;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for i in 0..2 {
+            if self.head_vals[i].is_none() {
+                self.head_vals[i] = self.iters[i].next();
+            }
+        }
+        match (self.head_vals[0], self.head_vals[1]) {
+            (None, None) => None,
+            (Some(v), None) => {
+                self.head_vals[0] = None;
+                Some(v)
+            }
+            (None, Some(v)) => {
+                self.head_vals[1] = None;
+                Some(v)
+            }
+            (Some(a), Some(b)) => {
+                if a == b {
+                    self.head_vals[0] = None;
+                    self.head_vals[1] = None;
+                    Some(a)
+                } else if a < b {
+                    self.head_vals[0] = None;
+                    Some(a)
+                } else {
+                    self.head_vals[1] = None;
+                    Some(b)
+                }
+            }
+        }
+    }
+}
+
+impl<'a, K> DoubleEndedIterator for RBTreeSetUnion<'a, K>
+where
+    K: Ord,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        for i in 0..2 {
+            if self.tail_vals[i].is_none() {
+                self.tail_vals[i] = self.iters[i].next_back();
+            }
+        }
+        match (self.tail_vals[0], self.tail_vals[1]) {
+            (None, None) => None,
+            (Some(v), None) => {
+                self.tail_vals[0] = None;
+                Some(v)
+            }
+            (None, Some(v)) => {
+                self.tail_vals[1] = None;
+                Some(v)
+            }
+            (Some(a), Some(b)) => {
+                if a == b {
+                    self.tail_vals[0] = None;
+                    self.tail_vals[1] = None;
+                    Some(a)
+                } else if a < b {
+                    self.tail_vals[1] = None;
+                    Some(b)
+                } else {
+                    self.tail_vals[0] = None;
+                    Some(a)
+                }
+            }
         }
     }
 }
