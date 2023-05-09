@@ -1,5 +1,8 @@
+#[allow(dead_code)]
+
 // mod dancing_links;
 // mod skip_list;
+mod fenwick_tree;
 pub mod rbtree;
 
 #[cfg(test)]
