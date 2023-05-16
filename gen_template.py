@@ -69,7 +69,7 @@ def leetcode(action, problem):
         with open(os.path.join(folder, "src", "lib.rs"), "w") as lib_file:
             for i in range(len(lines)):
                 if lines[i].startswith("mod"):
-                    lines[i] = f"mod f{problem};"
+                    lines[i] = f"mod {problem};"
             lib_file.writelines(lines)
     elif action in ["r", "rm", "remove"]:
         try:
