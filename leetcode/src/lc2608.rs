@@ -5,10 +5,21 @@ mod tests {
     #[test]
     fn test0() {
         let n = 4;
-        let edges = vec![[0, 1], [2, 0]];
-        let edges = edges.into_iter().map(|x| x.to_vec()).collect();
+        let edges = to_vec2d([[0, 1], [2, 0]]);
         let ans = -1;
         assert_eq!(Solution::find_shortest_cycle(n, edges), ans);
+    }
+
+    fn to_vec2d<T, O, I>(a: O) -> Vec<Vec<T>>
+    where
+        T: Clone,
+        I: AsRef<[T]>,
+        O: AsRef<[I]>,
+    {
+        a.as_ref()
+            .iter()
+            .map(|v| v.as_ref().to_vec())
+            .collect::<Vec<_>>()
     }
 }
 
@@ -32,7 +43,7 @@ impl Solution {
             vis[i] = 0;
             while let Some((cur, s, from)) = que.pop_front() {
                 for &(nxt, e) in &graph[cur] {
-                    if vis[nxt] != - 1 {
+                    if vis[nxt] != -1 {
                         if nxt != i && e != from {
                             ans = ans.min(vis[nxt] + s + 1);
                         }
