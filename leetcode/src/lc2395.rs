@@ -21,3 +21,19 @@ mod tests {
 use crate::*;
 
 struct Solution {}
+
+use std::collections::HashSet;
+
+impl Solution {
+    pub fn find_subarrays(nums: Vec<i32>) -> bool {
+        let mut set = HashSet::new();
+        for i in 0..nums.len() - 1 {
+            let x = nums[i] + nums[i + 1];
+            if set.contains(&x) {
+                return true;
+            }
+            set.insert(x);
+        }
+        false
+    }
+}

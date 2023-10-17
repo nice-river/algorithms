@@ -21,3 +21,16 @@ mod tests {
 use crate::*;
 
 struct Solution {}
+
+impl Solution {
+    pub fn max_profit(prices: Vec<i32>) -> i32 {
+        let mut iter = prices.into_iter().rev();
+        let mut ans = 0;
+        let mut maxi = iter.next().unwrap();
+        for p in iter {
+            ans = ans.max(maxi - p);
+            maxi = maxi.max(p);
+        }
+        ans
+    }
+}
