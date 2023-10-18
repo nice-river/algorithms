@@ -4,10 +4,10 @@ mod tests {
 
     #[test]
     fn test0() {
-        let n = 3;
-        let m = 4;
-        let k = 3;
-        let ans = 4;
+        let n = 4;
+        let m = 3;
+        let k = 2;
+        let ans = 39;
         assert_eq!(Solution::num_of_arrays(n, m, k), ans);
     }
 
@@ -32,44 +32,26 @@ impl Solution {
         let n = n as usize;
         let m = m as usize;
         let k = k as usize;
-        let mut powers = vec![vec![1; n + 1]; m + 1];
-        for i in 1..=m {
-            let mut b = i as i64;
-            for j in 1..=n {
-                powers[i][j] = b;
-                b *= i as i64;
-                b %= MODULE;
-            }
-        }
-        // let mut dp = vec![vec![0; m + 1]; k + 1];
-        let mut sums = vec![vec![0; m + 1]; k + 1];
-        let mut ans = 0i64;
-        for i in 1..=m {
-            sums[1][i] = 1 + sums[1][i - 1];
-            if k == 1 {
-                ans += powers[i][n - 1];
-                ans %= MODULE;
-            }
-        }
-        for i in 1..n {
+        let mut dp = vec![vec![0; m + 1]; k + 1];
+        dp[0][0] = 1;
+        for _ in 0..n {
             let mut ndp = vec![vec![0; m + 1]; k + 1];
-            let mut nsums = vec![vec![0; m + 1]; k + 1];
-            for s in 1..=k {
-                for t in 1..=m {
-                    ndp[s][t] += sums[s - 1][t - 1];
-                    ndp[s][t] %= MODULE;
-                    nsums[s][t] += nsums[s][t - 1] + ndp[s][t];
-                    nsums[s][t] %= MODULE;
+            for i in 1..=k {
+                let mut sum = dp[i - 1][0];
+                for j in 1..=m {
+                    ndp[i][j] = dp[i][j] * j as i64;
+                    ndp[i][j] %= MODULE;
+                    ndp[i][j] += sum;
+                    ndp[i][j] %= MODULE;
+                    sum += dp[i - 1][j];
                 }
             }
-            sums = nsums;
-            for t in 1..=m {
-                let mut x = ndp[k][t];
-                x *= powers[m][n - i - 1];
-                x %= MODULE;
-                ans += x;
-                ans %= MODULE;
-            }
+            dp = ndp;
+        }
+        let mut ans = 0;
+        for i in 1..=m {
+            ans += dp[k][i];
+            ans %= MODULE;
         }
         ans as i32
     }
