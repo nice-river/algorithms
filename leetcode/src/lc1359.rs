@@ -18,6 +18,17 @@ mod tests {
     }
 }
 
-use crate::*;
-
 struct Solution {}
+
+impl Solution {
+    pub fn count_orders(n: i32) -> i32 {
+        const MODULE: i64 = 1_000_000_007;
+        let mut ans = 1i64;
+        for i in 1..n as i64 {
+            let k = (i * 2) + 1;
+            let g = (k + 1) * k / 2;
+            ans = (ans * g) % MODULE;
+        }
+        ans as i32
+    }
+}

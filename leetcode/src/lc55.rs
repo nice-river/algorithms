@@ -21,3 +21,17 @@ mod tests {
 use crate::*;
 
 struct Solution {}
+
+impl Solution {
+    pub fn can_jump(nums: Vec<i32>) -> bool {
+        let mut p = 0;
+        let n = nums.len();
+        for (i, num) in nums.into_iter().enumerate() {
+            if p < i {
+                break;
+            }
+            p = p.max(i + num as usize);
+        }
+        p >= n - 1
+    }
+}
