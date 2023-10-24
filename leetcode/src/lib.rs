@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-mod lc1531;
+mod lc2272;
 
 use std::cell::RefCell;
 use std::rc::Rc;
