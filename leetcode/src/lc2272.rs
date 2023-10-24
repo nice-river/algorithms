@@ -39,8 +39,8 @@ mod tests {
 
     #[test]
     fn test5() {
-        let s = "ababb".to_owned();
-        let ans = 2;
+        let s = "abbbbabbbb".to_owned();
+        let ans = 7;
         assert_eq!(Solution::largest_variance(s), ans);
     }
 
@@ -48,6 +48,20 @@ mod tests {
     fn test6() {
         let s = "aab".to_owned();
         let ans = 1;
+        assert_eq!(Solution::largest_variance(s), ans);
+    }
+
+    #[test]
+    fn test7() {
+        let s = "aaaa".to_owned();
+        let ans = 0;
+        assert_eq!(Solution::largest_variance(s), ans);
+    }
+
+    #[test]
+    fn test8() {
+        let s = "aabbbbaa".to_owned();
+        let ans = 3;
         assert_eq!(Solution::largest_variance(s), ans);
     }
 
@@ -74,61 +88,43 @@ impl Solution {
     pub fn largest_variance(s: String) -> i32 {
         let s = s.as_bytes();
         let mut ans = 0;
-        let mut cnts = vec![0; ALPHA];
-        let mut stks: Vec<Vec<Vec<(i32, usize)>>> = vec![vec![vec![]; ALPHA]; ALPHA];
+        let mut pos = vec![vec![]; ALPHA];
+        for (i, &ch) in s.iter().enumerate() {
+            pos[(ch - b'a') as usize].push(i);
+        }
+
         for i in 0..ALPHA {
             for j in 0..ALPHA {
-                stks[i][j].push((0, 0));
-            }
-        }
-        let mut pos = vec![0; ALPHA];
-        for i in 0..s.len() {
-            let x = (s[i] - b'a') as usize;
-            cnts[x] += 1;
-            pos[x] = i + 1;
-            for y in 0..ALPHA {
-                if y == x {
+                if i == j {
                     continue;
                 }
-                let stk = &stks[x][y];
-                let mut l = 0;
-                let mut r = stk.len();
-                let p = pos[y];
-                let mut q = stk.len();
-                while l < r {
-                    let m = (l + r) / 2;
-                    if stk[m].1 < p {
-                        q = m;
-                        l = m + 1;
+                let mut p = 0;
+                let mut q = 0;
+                let mut f = -1;
+                let mut g = i32::MIN;
+                while p < pos[i].len() && q < pos[j].len() {
+                    if pos[i][p] < pos[j][q] {
+                        f = f.max(0) + 1;
+                        g += 1;
+                        p += 1;
                     } else {
-                        r = m;
+                        g = g.max(f).max(0) - 1;
+                        f = f.max(0) - 1;
+                        q += 1;
                     }
+                    ans = ans.max(g);
                 }
-                if q != stk.len() {
-                    ans = ans.max(cnts[x] - cnts[y] - stk[q].0);
+                while p < pos[i].len() {
+                    f = f.max(0) + 1;
+                    g += 1;
+                    p += 1;
+                    ans = ans.max(g);
                 }
-                let stk = &stks[y][x];
-                let mut l = 0;
-                let mut r = stk.len();
-                let p = pos[y];
-                let mut q = stk.len();
-                while l < r {
-                    let m = (l + r) / 2;
-                    if stk[m].1 < p {
-                        q = m;
-                        l = m + 1;
-                    } else {
-                        r = m;
-                    }
-                }
-                if q != stk.len() {
-                    ans = ans.max(cnts[y] - cnts[x] - stk[q].0);
-                }
-                if stks[x][y].last().unwrap().0 > cnts[x] - cnts[y] {
-                    stks[x][y].push((cnts[x] - cnts[y], i + 1));
-                }
-                if stks[y][x].last().unwrap().0 > cnts[y] - cnts[x] {
-                    stks[y][x].push((cnts[y] - cnts[x], i + 1));
+                while q < pos[j].len() {
+                    g = g.max(f).max(0) - 1;
+                    f = f.max(0) - 1;
+                    q += 1;
+                    ans = ans.max(g);
                 }
             }
         }
