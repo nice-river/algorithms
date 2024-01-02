@@ -7,4 +7,4 @@ set(CMAKE_BUILD_TYPE Release)
 include_directories(.)
 include_directories(src)
 
-add_executable(algorithm leetcode/src/lc1186.cpp)
+add_executable(algorithm leetcode/src/lc2977.cpp)

@@ -1,5 +1,10 @@
 [workspace]
-members = ["leetcode", "codechef", "codeforces", "data_structures"]
+members = [
+    "leetcode",
+    "codechef",
+    "codeforces",
+    "data_structures",
+]
 resolver = "2"
 
 default-members = ["codeforces"]
