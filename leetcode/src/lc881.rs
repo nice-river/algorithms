@@ -13,8 +13,6 @@ mod tests {
 	}
 }
 
-use std::collections::BinaryHeap;
-
 impl Solution {
 	pub fn num_rescue_boats(mut people: Vec<i32>, limit: i32) -> i32 {
 		people.sort_unstable();
