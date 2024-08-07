@@ -36,3 +36,65 @@ impl TreeNode {
         }
     }
 }
+
+#[allow(unused_macros)]
+macro_rules! to_vec {
+    ([ [$($x:tt),* $(,)?] $(,)?] $(,)?) => {
+        // e.g. [[ [1], [2, 3], [4] ]]
+        // e.g. [[ 1, 2, 3, ]]
+        vec![vec![ $(to_vec!($x)),* ]]
+    };
+    ([ [$($x:expr),* $(,)?] $(,)?] $(,)?) => {
+        // e.g. [[ 1 + 2, 3 * 4 ]]
+        // 1 + 2 is not valid `tt`
+        vec![vec![ $(to_vec!($x)),* ]]
+    };
+    ([ [$($x:tt),* $(,)?], $($y:tt),+ $(,)?] $(,)?) => {
+        // e.g. [[ [1], [2, 3], [4] ], [[5, 6], []]]
+        // e.g. [[ 1, 2, 3, ], []]
+        {
+            let mut x = vec![vec![$(to_vec!($x)),* ]];
+            x.extend([$(to_vec!($y)),+]);
+            x
+        }
+    };
+    ([ [$($x:expr),* $(,)?], $($y:tt),+ $(,)?] $(,)?) => {
+        // e.g. [[ 1 + 2, 2 + 3, 4, ], [], [2, 3]]
+        // 1 + 2 is not valid `tt`
+        {
+            let mut x = vec![vec![$(to_vec!($x)),* ]];
+            x.extend([$(to_vec!($y)),+]);
+            x
+        }
+    };
+    ([ $($x:expr),* $(,)?] $(,)?) => {
+        // [ 1 + 2, 2 + 3, 4, ],
+        vec![ $(to_vec!($x)),* ]
+    };
+    ($x:expr) => {
+        $x
+    }
+}
+
+pub(crate) use to_vec;
+
+#[test]
+fn test_macro_to_vec() {
+    let x = 20;
+    let y = 30;
+    let s = to_vec!([
+        [[1, 2 + 3,], [x * y], [x]],
+        [],
+        [[1, 2 + 3,], [x * y,], [x], []],
+        [[], [y, 2], [x * 10],],
+        [[y + 2], [y, 2], [x],],
+    ],);
+    let t = vec![
+        vec![vec![1, 2 + 3], vec![x * y], vec![x]],
+        vec![],
+        vec![vec![1, 2 + 3], vec![x * y], vec![x], vec![]],
+        vec![vec![], vec![y, 2], vec![x * 10]],
+        vec![vec![y + 2], vec![y, 2], vec![x]],
+    ];
+    assert_eq!(s, t);
+}
