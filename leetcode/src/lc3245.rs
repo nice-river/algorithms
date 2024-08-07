@@ -1,11 +1,30 @@
 #[cfg(test)]
 mod tests {
+    macro_rules! to_vec {
+        ([ [$($x:tt),* $(,)?] $(,)?] $(,)?) => {
+            vec![vec![ $(to_vec!($x)),* ]]
+        };
+        ([ [$($x:tt),* $(,)?], $($y:tt),+ $(,)?] $(,)?) => {
+            {
+                let mut x = vec![vec![$(to_vec!($x)),* ]];
+                x.extend([$(to_vec!($y)),+]);
+                x
+            }
+        };
+        ([ $($x:expr),* $(,)?] $(,)?) => {
+            vec![ $(to_vec!($x)),* ]
+        };
+        ($x:expr) => {
+            $x
+        }
+    }
+
     use super::*;
 
     #[test]
     fn test0() {
-        let colors = vec![0, 1, 1, 0, 1];
-        let queries = vec![vec![2, 1, 0], vec![1, 4]];
+        let colors = to_vec!([0, 1, 1, 0, 1]);
+        let queries = to_vec!([[2, 1, 0], [1, 4]]);
         let ans = vec![2];
         assert_eq!(Solution::number_of_alternating_groups(colors, queries), ans);
     }
@@ -45,18 +64,18 @@ mod tests {
     #[test]
     fn test5() {
         let colors = vec![1, 0, 1, 0, 1, 0, 1, 1, 0];
-        let queries = vec![
-            vec![2, 6, 0],
-            vec![2, 0, 0],
-            vec![2, 6, 0],
-            vec![2, 0, 1],
-            vec![2, 4, 0],
-            vec![2, 3, 1],
-            vec![1, 6],
-            vec![2, 4, 0],
-            vec![1, 3],
-            vec![1, 4],
-        ];
+        let queries = to_vec!([
+            [2, 6, 0],
+            [2, 0, 0],
+            [2, 6, 0],
+            [2, 0, 1],
+            [2, 4, 0],
+            [2, 3, 1],
+            [1, 6],
+            [2, 4, 0],
+            [1, 3],
+            [1, 4],
+        ]);
         let ans = vec![1, 4, 3];
         assert_eq!(Solution::number_of_alternating_groups(colors, queries), ans);
     }
@@ -134,170 +153,94 @@ impl Solution {
                     continue;
                 }
                 colors[pos] = color;
-                if pos == n - 1 {
+                if pos > 0 {
                     if color == colors[pos - 1] {
-                        let a = b2a.remove(&pos).unwrap();
-                        let t = lens.get_mut(&(pos - a + 1)).unwrap();
-                        *t -= 1;
-                        if *t == 0 {
-                            lens.remove(&(pos - a + 1));
-                        }
+                        let (&b, &a) = b2a.range(pos..).next().unwrap();
                         a2b.remove(&a);
-                        a2b.insert(a, pos - 1);
-                        b2a.insert(pos - 1, a);
-                        a2b.insert(pos, pos);
-                        b2a.insert(pos, pos);
-                        *lens.entry(1).or_insert(0) += 1;
-                        *lens.entry(pos - a).or_insert(0) += 1;
-                    } else {
-                        let a = b2a.remove(&(pos - 1)).unwrap();
-                        let t = lens.get_mut(&(pos - a)).unwrap();
-                        *t -= 1;
-                        if *t == 0 {
-                            lens.remove(&(pos - a));
-                        }
-                        let t = lens.get_mut(&1).unwrap();
-                        *t -= 1;
-                        if *t == 0 {
-                            lens.remove(&1);
-                        }
-                        a2b.insert(a, pos);
-                        b2a.remove(&(pos - 1));
-                        b2a.insert(pos, a);
-                        *lens.entry(pos - a + 1).or_insert(0) += 1;
-                    }
-                } else if pos == 0 {
-                    if color == colors[pos + 1] {
-                        let b = a2b.remove(&pos).unwrap();
-                        let t = lens.get_mut(&(b - pos + 1)).unwrap();
-                        *t -= 1;
-                        if *t == 0 {
-                            lens.remove(&(b - pos + 1));
-                        }
-                        a2b.insert(pos + 1, b);
-                        b2a.insert(b, pos + 1);
-                        a2b.insert(pos, pos);
-                        b2a.insert(pos, pos);
-                        *lens.entry(1).or_insert(0) += 1;
-                        *lens.entry(b - pos).or_insert(0) += 1;
-                    } else {
-                        let b = a2b.remove(&(pos + 1)).unwrap();
-                        let t = lens.get_mut(&(b - pos)).unwrap();
-                        *t -= 1;
-                        if *t == 0 {
-                            lens.remove(&(b - pos));
-                        }
-                        let t = lens.get_mut(&1).unwrap();
-                        *t -= 1;
-                        if *t == 0 {
-                            lens.remove(&1);
-                        }
-                        a2b.insert(pos, b);
-                        b2a.remove(&pos);
-                        b2a.insert(b, pos);
-                        *lens.entry(b - pos + 1).or_insert(0) += 1;
-                    }
-                } else {
-                    match (colors[pos - 1] == color, color == colors[pos + 1]) {
-                        (true, true) => {
-                            let (&b, &a) = b2a.range(pos..).next().unwrap();
-                            b2a.remove(&b);
-                            a2b.remove(&a);
-                            let t = lens.get_mut(&(b - a + 1)).unwrap();
-                            *t -= 1;
-                            if *t == 0 {
+                        b2a.remove(&b);
+                        match lens.get_mut(&(b - a + 1)).unwrap() {
+                            1 => {
                                 lens.remove(&(b - a + 1));
                             }
-                            if pos > a {
-                                a2b.insert(a, pos - 1);
-                                b2a.insert(pos - 1, a);
-                                *lens.entry(pos - a).or_insert(0) += 1;
+                            t => {
+                                *t -= 1;
                             }
-                            if pos < b {
-                                a2b.insert(pos + 1, b);
-                                b2a.insert(b, pos + 1);
-                                *lens.entry(b - pos).or_insert(0) += 1;
-                            }
-                            a2b.insert(pos, pos);
-                            b2a.insert(pos, pos);
-                            *lens.entry(1).or_insert(0) += 1;
                         }
-                        (false, false) => {
-                            let a = b2a.remove(&(pos - 1)).unwrap();
-                            a2b.remove(&a);
-                            let t = lens.get_mut(&(pos - a)).unwrap();
-                            *t -= 1;
-                            if *t == 0 {
+                        a2b.insert(a, pos - 1);
+                        b2a.insert(pos - 1, a);
+                        *lens.entry(pos - a).or_insert(0) += 1;
+                        a2b.insert(pos, b);
+                        b2a.insert(b, pos);
+                        *lens.entry(b - pos + 1).or_insert(0) += 1;
+                    } else {
+                        let a = b2a.remove(&(pos - 1)).unwrap();
+                        a2b.remove(&a);
+                        match lens.get_mut(&(pos - a)).unwrap() {
+                            1 => {
                                 lens.remove(&(pos - a));
                             }
-
-                            let b = a2b.remove(&(pos + 1)).unwrap();
-                            b2a.remove(&b);
-                            let t = lens.get_mut(&(b - pos)).unwrap();
-                            *t -= 1;
-                            if *t == 0 {
-                                lens.remove(&(b - pos));
+                            t => {
+                                *t -= 1;
                             }
-                            let t = lens.get_mut(&1).unwrap();
-                            *t -= 1;
-                            if *t == 0 {
-                                lens.remove(&1);
-                            }
-                            a2b.remove(&pos);
-                            b2a.remove(&pos);
-
-                            a2b.insert(a, b);
-                            b2a.insert(b, a);
-                            *lens.entry(b - a + 1).or_insert(0) += 1;
                         }
-                        (true, false) => {
-                            // before 0 1 1, after 0 0 1
-                            let a = b2a.remove(&pos).unwrap();
-                            a2b.remove(&a);
-                            let t = lens.get_mut(&(pos - a + 1)).unwrap();
-                            *t -= 1;
-                            if *t == 0 {
-                                lens.remove(&(pos - a + 1));
-                            }
-                            a2b.insert(a, pos - 1);
-                            b2a.insert(pos - 1, a);
-                            *lens.entry(pos - a).or_insert(0) += 1;
-
-                            let b = a2b.remove(&(pos + 1)).unwrap();
-                            b2a.remove(&b);
-                            let t = lens.get_mut(&(b - pos)).unwrap();
-                            *t -= 1;
-                            if *t == 0 {
-                                lens.remove(&(b - pos));
-                            }
-                            a2b.insert(pos, b);
-                            b2a.insert(b, pos);
-                            *lens.entry(b - pos + 1).or_insert(0) += 1;
-                        }
-                        (false, true) => {
-                            // before 1 1 0, after 1 0 0
-                            let b = a2b.remove(&pos).unwrap();
-                            b2a.remove(&b);
-                            let t = lens.get_mut(&(b - pos + 1)).unwrap();
-                            *t -= 1;
-                            if *t == 0 {
+                        let b = a2b.remove(&pos).unwrap();
+                        b2a.remove(&b);
+                        match lens.get_mut(&(b - pos + 1)).unwrap() {
+                            1 => {
                                 lens.remove(&(b - pos + 1));
                             }
-                            a2b.insert(pos + 1, b);
-                            b2a.insert(b, pos + 1);
-                            *lens.entry(b - pos).or_insert(0) += 1;
-
-                            let a = b2a.remove(&(pos - 1)).unwrap();
-                            a2b.remove(&a);
-                            let t = lens.get_mut(&(pos - a)).unwrap();
-                            *t -= 1;
-                            if *t == 0 {
-                                lens.remove(&(pos - a));
+                            t => {
+                                *t -= 1;
                             }
-                            a2b.insert(a, pos);
-                            b2a.insert(pos, a);
-                            *lens.entry(pos - a + 1).or_insert(0) += 1;
                         }
+                        a2b.insert(a, b);
+                        b2a.insert(b, a);
+                        *lens.entry(b - a + 1).or_insert(0) += 1;
+                    }
+                } 
+                if pos < n - 1 {
+                    if color == colors[pos + 1] {
+                        let (&b, &a) = b2a.range(pos..).next().unwrap();
+                        b2a.remove(&b);
+                        a2b.remove(&a);
+                        match lens.get_mut(&(b - a + 1)).unwrap() {
+                            1 => {
+                                lens.remove(&(b - a  + 1));
+                            }
+                            t => {
+                                *t -= 1;
+                            }
+                        }
+                        a2b.insert(a, pos);
+                        b2a.insert(pos, a);
+                        *lens.entry(pos - a + 1).or_insert(0) += 1;
+                        a2b.insert(pos + 1, b);
+                        b2a.insert(b, pos + 1);
+                        *lens.entry(b - pos).or_insert(0) += 1;
+                    } else {
+                        let a = b2a.remove(&pos).unwrap();
+                        a2b.remove(&a);
+                        match lens.get_mut(&(pos - a + 1)).unwrap() {
+                            1 => {
+                                lens.remove(&(pos - a + 1));
+                            }
+                            t => {
+                                *t -= 1;
+                            }
+                        }
+                        let b = a2b.remove(&(pos + 1)).unwrap();
+                        b2a.remove(&b);
+                        match lens.get_mut(&(b - pos)).unwrap() {
+                            1 => {
+                                lens.remove(&(b - pos));
+                            }
+                            t => {
+                                *t -= 1;
+                            }
+                        }
+                        a2b.insert(a, b);
+                        b2a.insert(b, a);
+                        *lens.entry(b - a + 1).or_insert(0) += 1;
                     }
                 }
             }
