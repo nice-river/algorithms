@@ -84,17 +84,17 @@ fn test_macro_to_vec() {
     let y = 30;
     let s = to_vec!([
         [[1, 2 + 3,], [x * y], [x]],
-        [],
+        [[if x > y { x } else { y }]],
         [[1, 2 + 3,], [x * y,], [x], []],
         [[], [y, 2], [x * 10],],
-        [[y + 2], [y, 2], [x],],
+        [[y + 2], [y, 2], [x], [match x > y { true => x - y, false => x + y}]],
     ],);
     let t = vec![
         vec![vec![1, 2 + 3], vec![x * y], vec![x]],
-        vec![],
+        vec![vec![if x > y { x } else { y }]],
         vec![vec![1, 2 + 3], vec![x * y], vec![x], vec![]],
         vec![vec![], vec![y, 2], vec![x * 10]],
-        vec![vec![y + 2], vec![y, 2], vec![x]],
+        vec![vec![y + 2], vec![y, 2], vec![x], vec![match x > y { true => x - y, false => x + y}]],
     ];
     assert_eq!(s, t);
 }
