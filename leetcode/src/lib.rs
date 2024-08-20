@@ -1,6 +1,6 @@
 #![allow(clippy::items_after_test_module)]
 #![allow(dead_code, unused_imports, unused_variables)]
-mod lc3251;
+mod lc3259;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -46,7 +46,7 @@ macro_rules! to_vec {
     };
     ([ [$($x:expr),* $(,)?] $(,)?] $(,)?) => {
         // e.g. [[ 1 + 2, 3 * 4 ]]
-        // 1 + 2 is not valid `tt`
+        // 1 + 2 is not a valid `tt`
         vec![vec![ $(to_vec!($x)),* ]]
     };
     ([ [$($x:tt),* $(,)?], $($y:tt),+ $(,)?] $(,)?) => {
@@ -60,7 +60,7 @@ macro_rules! to_vec {
     };
     ([ [$($x:expr),* $(,)?], $($y:tt),+ $(,)?] $(,)?) => {
         // e.g. [[ 1 + 2, 2 + 3, 4, ], [], [2, 3]]
-        // 1 + 2 is not valid `tt`
+        // 1 + 2 is not a valid `tt`
         {
             let mut x = vec![vec![$(to_vec!($x)),* ]];
             x.extend([$(to_vec!($y)),+]);
@@ -78,7 +78,6 @@ macro_rules! to_vec {
 
 pub(crate) use to_vec;
 
-#[test]
 fn test_macro_to_vec() {
     let x = 20;
     let y = 30;

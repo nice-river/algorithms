@@ -39,12 +39,12 @@ impl Solution {
                 }
                 mem[j] = dp[t as usize];
             }
-	    dp[..].copy_from_slice(&mem);
+            dp[..].copy_from_slice(&mem);
             for i in 1..dp.len() {
                 dp[i] += dp[i - 1];
                 dp[i] %= MODULE;
             }
         }
-	*dp.last().unwrap() as i32
+        *dp.last().unwrap() as i32
     }
 }
