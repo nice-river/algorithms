@@ -33,13 +33,29 @@ mod tests {
         let ans = "-1";
         assert_eq!(Solution::smallest_number(num, t), ans);
     }
+
+    #[test]
+    fn test4() {
+        let num = "30".to_owned();
+        let t = 9;
+        let ans = "33";
+        assert_eq!(Solution::smallest_number(num, t), ans);
+    }
+
+    #[test]
+    fn test5() {
+        let num = "78".to_owned();
+        let t = 42;
+        let ans = "167";
+        assert_eq!(Solution::smallest_number(num, t), ans);
+    }
 }
 
 use crate::*;
 
 struct Solution {}
 
-use std::{collections::HashMap, mem::discriminant};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 struct Helper {
@@ -94,16 +110,17 @@ impl Helper {
         ret
     }
 
-    fn pop(&mut self, digit: u8) -> Option<u8> {
+    fn pop(&mut self, digit: u8) -> Vec<u8> {
+        let mut ret = vec![];
         match digit {
             b'1' => {
-                return Some(b'1');
+                return ret;
             }
             b'2' => {
                 if let Some(x) = self.freq.get_mut(&2) {
                     if *x >= 1 {
                         *x -= 1;
-                        return Some(b'2');
+                        ret.push(2);
                     }
                 }
             }
@@ -111,15 +128,17 @@ impl Helper {
                 if let Some(x) = self.freq.get_mut(&3) {
                     if *x >= 1 {
                         *x -= 1;
-                        return Some(b'3');
+                        ret.push(3);
                     }
                 }
             }
             b'4' => {
                 if let Some(x) = self.freq.get_mut(&2) {
-                    if *x >= 2 {
-                        *x -= 2;
-                        return Some(b'4');
+                    for _ in 0..2 {
+                        if *x >= 1 {
+                            *x -= 1;
+                            ret.push(2);
+                        }
                     }
                 }
             }
@@ -127,80 +146,58 @@ impl Helper {
                 if let Some(x) = self.freq.get_mut(&5) {
                     if *x >= 1 {
                         *x -= 1;
-                        return Some(b'5');
+                        ret.push(5);
                     }
                 }
             }
             b'6' => {
                 let x = *self.freq.get(&2).unwrap_or(&0);
                 let y = *self.freq.get(&3).unwrap_or(&0);
-                if x > 0 && y > 0 {
+                if x > 0 {
                     *self.freq.get_mut(&2).unwrap() -= 1;
+                    ret.push(2);
+                }
+                if y > 0 {
                     *self.freq.get_mut(&3).unwrap() -= 1;
-                    return Some(b'6');
+                    ret.push(3);
                 }
             }
             b'7' => {
                 if let Some(x) = self.freq.get_mut(&7) {
                     if *x >= 1 {
                         *x -= 1;
-                        return Some(b'7');
+                        ret.push(7);
                     }
                 }
             }
             b'8' => {
                 if let Some(x) = self.freq.get_mut(&2) {
-                    if *x >= 3 {
-                        *x -= 3;
-                        return Some(b'8');
+                    for _ in 0..3 {
+                        if *x >= 1 {
+                            *x -= 1;
+                            ret.push(2);
+                        }
                     }
                 }
             }
             b'9' => {
                 if let Some(x) = self.freq.get_mut(&3) {
-                    if *x >= 2 {
-                        *x -= 2;
-                        return Some(b'9');
-                    } else {
-                        return None;
+                    for _ in 0..2 {
+                        if *x >= 1 {
+                            *x -= 1;
+                            ret.push(3);
+                        }
                     }
-                } else {
-                    return None;
                 }
             }
             _ => unreachable!(),
         }
-        self.pop(digit + 1)
+        ret
     }
 
-    fn push(&mut self, digit: u8) {
-        match digit {
-            b'2' => {
-                *self.freq.entry(2).or_insert(0) += 1;
-            }
-            b'3' => {
-                *self.freq.entry(3).or_insert(0) += 1;
-            }
-            b'4' => {
-                *self.freq.entry(2).or_insert(0) += 2;
-            }
-            b'5' => {
-                *self.freq.entry(5).or_insert(0) += 1;
-            }
-            b'6' => {
-                *self.freq.entry(2).or_insert(0) += 1;
-                *self.freq.entry(3).or_insert(0) += 1;
-            }
-            b'7' => {
-                *self.freq.entry(7).or_insert(0) += 1;
-            }
-            b'8' => {
-                *self.freq.entry(2).or_insert(0) += 3;
-            }
-            b'9' => {
-                *self.freq.entry(3).or_insert(0) += 2;
-            }
-            _ => unreachable!(),
+    fn push(&mut self, digits: Vec<u8>) {
+        for digit in digits {
+            *self.freq.entry(digit as i32).or_insert(0) += 1;
         }
     }
 }
@@ -226,7 +223,6 @@ impl Solution {
             }
         }
         let mut helper = Helper::new(freq);
-        dbg!(&helper);
         if helper.min_digit_num() > num.len() {
             String::from_utf8(helper.gen_min_str()).unwrap()
         } else {
@@ -239,15 +235,17 @@ impl Solution {
             let x = helper.min_digit_num();
             ans.extend(std::iter::repeat(b'1').take(num.len() - x));
             ans.extend(helper.gen_min_str());
-            String::from_utf8(helper.gen_min_str()).unwrap()
+            String::from_utf8(ans).unwrap()
         }
     }
 
     fn dfs(num: &[u8], ans: &mut Vec<u8>, idx: usize, bigger: bool, helper: &mut Helper) -> bool {
-        dbg!((String::from_utf8(ans.clone()).unwrap(), idx, bigger));
         let x = helper.min_digit_num();
         if x > num.len() - idx {
             return false;
+        }
+        if idx == num.len() {
+            return true;
         }
         if bigger {
             if x <= num.len() - idx {
@@ -257,16 +255,15 @@ impl Solution {
             }
             return false;
         }
-        let start = if bigger { b'1' } else { num[idx] };
+        let start = num[idx].max(b'1');
         for c in start..=b'9' {
-            if let Some(g) = helper.pop(c) {
-                ans.push(g);
-                if Solution::dfs(num, ans, idx + 1, bigger || g > num[idx], helper) {
-                    return true;
-                } else {
-                    helper.push(g);
-                    ans.pop();
-                }
+            let digits = helper.pop(c);
+            ans.push(c);
+            if Solution::dfs(num, ans, idx + 1, bigger || c > num[idx], helper) {
+                return true;
+            } else {
+                helper.push(digits);
+                ans.pop();
             }
         }
         false
