@@ -1,6 +1,6 @@
 #![allow(clippy::items_after_test_module)]
 #![allow(dead_code, unused_imports, unused_variables)]
-mod lcc488q4;
+mod lcc490q4;
 
 use std::cell::RefCell;
 use std::rc::Rc;
